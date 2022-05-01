@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace NetApp.Security
 {
@@ -15,17 +16,17 @@ namespace NetApp.Security
 
         ICollection<LdapUser> GetAllUsers();
 
-        //LdapUser GetAdministrator();
+        //LdapUser GetAdministrator();
 
-        LdapUser GetUserByName(string name);
+        LdapUser GetUserByName(string name);
         LdapUser GetUserByLogonName(string username);
         List<LdapUser> GetUser(string firstname, string lastname);
         List<LdapUser> GetSubordinates(string managerUsername);
         void AddUser(LdapUser user, string password);
         void Delete(string name, LdapPrincipalType type = LdapPrincipalType.User);
-        //void DeleteUser(string distinguishedName);
+        //void DeleteUser(string distinguishedName);
 
-        bool Authenticate(string distinguishedName, string password);
+        bool Authenticate(string distinguishedName, string password);
         void ChangePassword(string username, string password, bool forceChange = true);
         bool IsUserInGroup(string username, List<string> groups, bool checkNested = true);
         void AddToGroups(string username, List<string> groups);
@@ -37,5 +38,8 @@ namespace NetApp.Security
         void DisableAccount(string username, bool disable);
         void SetManager(string username, string managerName);
         void SetPasswordNeverExpires(string username, bool neverExpire);
+        void SetPasswordExpired(string username, bool expired = true);
+        void ChangeOU(string username, string ouDistinguishedName);
+        void UpdatePhoto(string username, Stream stream);
     }
 }
