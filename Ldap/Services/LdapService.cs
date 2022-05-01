@@ -7,10 +7,11 @@ using System.Linq;
 using System.Security.Principal;
 using System.Text;
 using NetApp.Security.Extensions;
-using System.DirectoryServices.AccountManagement;
+//using System.DirectoryServices.AccountManagement;
 using NetApp.Common;
 using System.Text.RegularExpressions;
-using System.DirectoryServices;
+//using System.DirectoryServices;
+using System.IO;
 
 namespace NetApp.Security
 {
@@ -370,7 +371,23 @@ namespace NetApp.Security
             if (user == null)
                 throw new Exception($"Invalid user {username}.");
             var flag = Convert.ToInt32(user.AccountFlag);
-            flag = flag | 0x10000;
+            flag = neverExpire ? flag | 0x10000 : flag & ~0x10000;
+            SetUserAttributes(username, new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("userAccountControl", flag.ToString()) });
+        }
+        public void SetPasswordExpired(string username, bool expired = true)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+                throw new ArgumentNullException(nameof(username));
+            //var user = GetUser(username);
+            //if (user == null)
+            //    throw new Exception($"Invalid user {username}.");
+            //user.PasswordNeverExpires = neverExpire;
+            //user.Save();
+            var user = GetUserByLogonName(username);
+            if (user == null)
+                throw new Exception($"Invalid user {username}.");
+            var flag = Convert.ToInt32(user.AccountFlag);
+            flag = expired ? flag | 0x800000 : flag & ~0x800000;
             SetUserAttributes(username, new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("userAccountControl", flag.ToString()) });
         }
         public void SetManager(string username, string managerName)
@@ -387,6 +404,52 @@ namespace NetApp.Security
             }
             SetUserAttributes(username, new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("manager", managerDn) });
         }
+        public void UpdatePhoto(string username, Stream stream)
+        {
+            int size = 96;
+            if (string.IsNullOrWhiteSpace(username))
+                throw new ArgumentNullException(nameof(username));
+            var user = GetUserByLogonName(username);
+            if (user == null)
+                throw new Exception($"User {username} not found.");
+            byte[] bytes = null;
+            using (var ms = new MemoryStream())
+            {
+                stream.CopyTo(ms);
+                bytes = ms.ToArray();
+            }
+            var changes = new LdapModification(LdapModification.REPLACE, new LdapAttribute("jpegPhoto", SupportClass.ToSByteArray(bytes)));
+            using (var ldapConnection = this.GetConnection())
+            {
+                ldapConnection.Modify(user.DistinguishedName, changes);
+            }
+            System.Drawing.Image img = System.Drawing.Image.FromStream(stream);
+
+            if (img.Size.Width > size || img.Size.Height > size)
+            {
+                System.Drawing.Image resized = ResizeImage(img, new System.Drawing.Size(size, size));
+                using (var ms = new MemoryStream())
+                {
+                    resized.Save(ms, System.Drawing.Imaging.ImageFormat.Bmp);
+                    bytes = ms.ToArray();
+                }
+            }
+            changes = new LdapModification(LdapModification.REPLACE, new LdapAttribute("thumbnailPhoto", SupportClass.ToSByteArray(bytes)));
+            using (var ldapConnection = this.GetConnection())
+            {
+                ldapConnection.Modify(user.DistinguishedName, changes);
+            }
+            //using (var img = Image.FromStream(stream))
+            //{
+            //    ImageConverter converter = new ImageConverter();
+            //    byte[] bytes = (byte[])converter.ConvertTo(img, typeof(byte[]));
+            //    var changes = new LdapModification(LdapModification.REPLACE, new LdapAttribute("jpegPhoto", SupportClass.ToSByteArray(bytes)));
+            //    using (var ldapConnection = this.GetConnection())
+            //    {
+            //        ldapConnection.Modify(user.DistinguishedName, changes);
+            //    }
+            //}
+        }
         public void AddUser(LdapUser user, string container)
         {
             var dn = $"CN={user.FullName},{container ?? _ldapSettings.DomainDistinguishedName}";
@@ -881,66 +944,84 @@ namespace NetApp.Security
         }
         public void AddToGroups(string username, List<string> groups)
         {
-            //if (string.IsNullOrWhiteSpace(username) || groups == null || groups.Count() == 0)
-            //    return;
-            //using (var ldapConnection = this.GetConnection())
-            //{
-            //    foreach (var item in groups)
-            //    {
-            //        LdapModification[] modGroup = new LdapModification[1];
-            //        LdapAttribute member = new LdapAttribute("member", username);
-            //        modGroup[0] = new LdapModification(LdapModification.ADD, member);
-            //        ldapConnection.Modify(item, modGroup);
-            //    }
-            //}
-            if (string.IsNullOrWhiteSpace(username) || groups == null || groups.Count() == 0)
+            if (string.IsNullOrWhiteSpace(username) || groups == null || groups.Count() == 0)
                 return;
-            PrincipalContext ctx = new PrincipalContext(ContextType.Domain, _ldapSettings.ServerName + ":" + _ldapSettings.ServerPort, _ldapSettings.DomainDistinguishedName, _ldapSettings.UseSSL ? ContextOptions.SimpleBind | ContextOptions.SecureSocketLayer : ContextOptions.Negotiate | ContextOptions.Signing | ContextOptions.Sealing, _ldapSettings.Credentials.DomainUserName, _encryptionService.Decrypt(_ldapSettings.Credentials.Password));
-            UserPrincipal user = UserPrincipal.FindByIdentity(ctx, username.Trim());
-            if (user == null)
-                throw new Exception($"Invalid user {username}");
-            foreach (var item in groups)
+            var userDn = GetUserByLogonName(username)?.DistinguishedName;
+            if (string.IsNullOrWhiteSpace(userDn))
+                throw new Exception($"Invalid user {username}.");
+            var userGroups = GetUserGroups(username, false);
+            var groupsToAdd = groups?.Except(userGroups);
+            if (groupsToAdd == null || groupsToAdd?.Count() == 0) return;
+            using (var ldapConnection = this.GetConnection())
             {
-                GroupPrincipal group = GroupPrincipal.FindByIdentity(ctx, item);
-                if (group == null)
-                    throw new Exception($"Invalid group {item}");
-                if (!group.Members.Any(x => x.DistinguishedName == user.DistinguishedName))
+                foreach (var item in groupsToAdd)
                 {
-                    group.Members.Add(user);
-                    group.Save();
+                    var groupDn = GetGroups(item)?.FirstOrDefault()?.DistinguishedName;
+                    if (string.IsNullOrWhiteSpace(groupDn))
+                        throw new Exception($"Invalid group {item}.");
+                    LdapModification[] modGroup = new LdapModification[1];
+                    LdapAttribute member = new LdapAttribute("member", userDn);
+                    modGroup[0] = new LdapModification(LdapModification.ADD, member);
+                    ldapConnection.Modify(groupDn, modGroup);
                 }
             }
-        }
+            //if (string.IsNullOrWhiteSpace(username) || groups == null || groups.Count() == 0)
+            //    return;
+            //PrincipalContext ctx = new PrincipalContext(ContextType.Domain, _ldapSettings.ServerName + ":" + _ldapSettings.ServerPort, _ldapSettings.DomainDistinguishedName, _ldapSettings.UseSSL ? ContextOptions.SimpleBind | ContextOptions.SecureSocketLayer : ContextOptions.Negotiate | ContextOptions.Signing | ContextOptions.Sealing, _ldapSettings.Credentials.DomainUserName, _encryptionService.Decrypt(_ldapSettings.Credentials.Password));
+            //UserPrincipal user = UserPrincipal.FindByIdentity(ctx, username.Trim());
+            //if (user == null)
+            //    throw new Exception($"Invalid user {username}");
+            //foreach (var item in groups)
+            //{
+            //    GroupPrincipal group = GroupPrincipal.FindByIdentity(ctx, item);
+            //    if (group == null)
+            //        throw new Exception($"Invalid group {item}");
+            //    if (!group.Members.Any(x => x.DistinguishedName == user.DistinguishedName))
+            //    {
+            //        group.Members.Add(user);
+            //        group.Save();
+            //    }
+            //}
+        }
         public void RemoveFromGroups(string username, List<string> groups)
         {
             if (string.IsNullOrWhiteSpace(username) || groups == null || groups.Count() == 0)
                 return;
-            //using (var ldapConnection = this.GetConnection())
-            //{
-            //    foreach (var item in groups)
-            //    {
-            //        LdapModification[] modGroup = new LdapModification[1];
-            //        LdapAttribute member = new LdapAttribute("member", username);
-            //        modGroup[0] = new LdapModification(LdapModification.DELETE, member);
-            //        ldapConnection.Modify(item, modGroup);
-            //    }
-            //}
-            PrincipalContext ctx = new PrincipalContext(ContextType.Domain, _ldapSettings.ServerName + ":" + _ldapSettings.ServerPort, _ldapSettings.DomainDistinguishedName, _ldapSettings.UseSSL ? ContextOptions.SimpleBind | ContextOptions.SecureSocketLayer : ContextOptions.Negotiate | ContextOptions.Signing | ContextOptions.Sealing, _ldapSettings.Credentials.DomainUserName, _encryptionService.Decrypt(_ldapSettings.Credentials.Password));
-            UserPrincipal user = UserPrincipal.FindByIdentity(ctx, username.Trim());
-            if (user == null)
-                throw new Exception($"Invalid user {username}");
-            foreach (var item in groups)
+            var userDn = GetUserByLogonName(username)?.DistinguishedName;
+            if (string.IsNullOrWhiteSpace(userDn))
+                throw new Exception($"Invalid user {username}.");
+            var userGroups = GetUserGroups(username, false);
+            var groupsToRemove = groups?.Intersect(userGroups);
+            if (groupsToRemove == null || groupsToRemove?.Count() == 0) return;
+            using (var ldapConnection = this.GetConnection())
             {
-                GroupPrincipal group = GroupPrincipal.FindByIdentity(ctx, item);
-                if (group == null)
-                    throw new Exception($"Invalid group {item}");
-                if (group.Members.Any(x => x.DistinguishedName == user.DistinguishedName))
+                foreach (var item in groups)
                 {
-                    group.Members.Remove(user);
-                    group.Save();
+                    var groupDn = GetGroups(item)?.FirstOrDefault()?.DistinguishedName;
+                    if (string.IsNullOrWhiteSpace(groupDn))
+                        throw new Exception($"Invalid group {item}.");
+                    LdapModification[] modGroup = new LdapModification[1];
+                    LdapAttribute member = new LdapAttribute("member", userDn);
+                    modGroup[0] = new LdapModification(LdapModification.DELETE, member);
+                    ldapConnection.Modify(groupDn, modGroup);
                 }
             }
-        }
+            //PrincipalContext ctx = new PrincipalContext(ContextType.Domain, _ldapSettings.ServerName + ":" + _ldapSettings.ServerPort, _ldapSettings.DomainDistinguishedName, _ldapSettings.UseSSL ? ContextOptions.SimpleBind | ContextOptions.SecureSocketLayer : ContextOptions.Negotiate | ContextOptions.Signing | ContextOptions.Sealing, _ldapSettings.Credentials.DomainUserName, _encryptionService.Decrypt(_ldapSettings.Credentials.Password));
+            //UserPrincipal user = UserPrincipal.FindByIdentity(ctx, username.Trim());
+            //if (user == null)
+            //    throw new Exception($"Invalid user {username}");
+            //foreach (var item in groups)
+            //{
+            //    GroupPrincipal group = GroupPrincipal.FindByIdentity(ctx, item);
+            //    if (group == null)
+            //        throw new Exception($"Invalid group {item}");
+            //    if (group.Members.Any(x => x.DistinguishedName == user.DistinguishedName))
+            //    {
+            //        group.Members.Remove(user);
+            //        group.Save();
+            //    }
+            //}
+        }
         //public List<string> GetUserGroups(string distinguishedName)
         //{
         //    List<string> result = new List<string>();
@@ -966,31 +1047,61 @@ namespace NetApp.Security
         //}
         public List<string> GetUserGroups(string username, bool recursive = true)
         {
-            List<string> groups = null;
-            if (!string.IsNullOrEmpty(username))
+            List<LdapEntry> groups = null;// new Collection<LdapEntry>();
+            if (!string.IsNullOrWhiteSpace(username))
             {
                 var distinguishedName = GetUserByLogonName(username)?.DistinguishedName;
                 if (string.IsNullOrWhiteSpace(distinguishedName))
-                    return null;
-                groups = new List<string>();
-                var getGroupsFilterForDn = recursive ? $"(&(objectCategory=group)(member:1.2.840.113556.1.4.1941:={distinguishedName}))" : $"(&(objectCategory=group)(member={distinguishedName}))";
-                using (DirectorySearcher dirSearch = new DirectorySearcher())
+                    throw new Exception($"Invalid user {username}.");
+                groups = new List<LdapEntry>();
+                var filter = recursive ? $"(&(objectCategory=group)(member:1.2.840.113556.1.4.1941:={distinguishedName}))" : $"(&(objectCategory=group)(member={distinguishedName}))";
+                using (var ldapConnection = this.GetConnection())
                 {
-                    dirSearch.Filter = getGroupsFilterForDn;
-                    dirSearch.PropertiesToLoad.Add("name");
-
-                    using (var results = dirSearch.FindAll())
+                    var search = ldapConnection.Search(
+                    this._searchBase,
+                    LdapConnection.SCOPE_SUB,
+                    filter,
+                    this._attributes,
+                    false,
+                    null,
+                    null);
+                    LdapMessage message;
+                    while ((message = search.getResponse()) != null)
                     {
-                        foreach (SearchResult result in results)
+                        if (!(message is LdapSearchResult searchResultMessage))
                         {
-                            if (result.Properties.Contains("name"))
-                                groups.Add((string)result.Properties["name"][0]);
+                            continue;
                         }
+                        var entry = searchResultMessage.Entry;
+                        groups.Add(this.CreateEntryFromAttributes(entry.DN, entry.getAttributeSet()));
                     }
                 }
             }
+            return groups?.Select(x => x.Name).ToList();
+            //List<string> groups = null;
+            //if (!string.IsNullOrEmpty(username))
+            //{
+            //    var distinguishedName = GetUserByLogonName(username)?.DistinguishedName;
+            //    if (string.IsNullOrWhiteSpace(distinguishedName))
+            //        return null;
+            //    groups = new List<string>();
+            //    var getGroupsFilterForDn = recursive ? $"(&(objectCategory=group)(member:1.2.840.113556.1.4.1941:={distinguishedName}))" : $"(&(objectCategory=group)(member={distinguishedName}))";
+            //    using (DirectorySearcher dirSearch = new DirectorySearcher())
+            //    {
+            //        dirSearch.Filter = getGroupsFilterForDn;
+            //        dirSearch.PropertiesToLoad.Add("name");
 
-            return groups;
+            //        using (var results = dirSearch.FindAll())
+            //        {
+            //            foreach (SearchResult result in results)
+            //            {
+            //                if (result.Properties.Contains("name"))
+            //                    groups.Add((string)result.Properties["name"][0]);
+            //            }
+            //        }
+            //    }
+            //}
+            //return groups;
         }
         public void SetUserAttributes(string username, List<KeyValuePair<string, string>> attributes)
         {
@@ -1024,7 +1135,7 @@ namespace NetApp.Security
                 throw new Exception($"Cannot find user {username}.");
             using (var ldapConnection = this.GetConnection())
             {
-                ldapConnection.Rename(user.CommonName, user.CommonName, ouDistinguishedName, true);
+                ldapConnection.Rename($"{user.DistinguishedName}", $"CN={user.CommonName}", ouDistinguishedName, true);
             }
         }
         public string GetParentOU(string username)
@@ -1172,5 +1283,32 @@ namespace NetApp.Security
         //    UserPrincipal user = UserPrincipal.FindByIdentity(ctx, username.Trim());
         //    return user;
         //}
-    }
+        private System.Drawing.Image ResizeImage(System.Drawing.Image image, System.Drawing.Size size, bool preserveAspectRatio = true)
+        {
+            int newWidth;
+            int newHeight;
+            if (preserveAspectRatio)
+            {
+                int originalWidth = image.Width;
+                int originalHeight = image.Height;
+                float percentWidth = (float)size.Width / (float)originalWidth;
+                float percentHeight = (float)size.Height / (float)originalHeight;
+                float percent = percentHeight < percentWidth ? percentHeight : percentWidth;
+                newWidth = (int)(originalWidth * percent);
+                newHeight = (int)(originalHeight * percent);
+            }
+            else
+            {
+                newWidth = size.Width;
+                newHeight = size.Height;
+            }
+            System.Drawing.Image newImage = new System.Drawing.Bitmap(newWidth, newHeight);
+            using (System.Drawing.Graphics graphicsHandle = System.Drawing.Graphics.FromImage(newImage))
+            {
+                graphicsHandle.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                graphicsHandle.DrawImage(image, 0, 0, newWidth, newHeight);
+            }
+            return newImage;
+        }
+    }
 }
