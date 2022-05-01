@@ -6,10 +6,10 @@
     <Copyright>Zhicheng Su</Copyright>
     <PackageProjectUrl>https://github.com/zsu/NetApp.Security</PackageProjectUrl>
     <RepositoryUrl>https://github.com/zsu/NetApp.Security</RepositoryUrl>
-    <PackageTags>Security, Ldap, .Net</PackageTags>
+    <PackageTags>Security, Ldap, Active Directory, .Net</PackageTags>
     <AssemblyVersion>1.1.0.0</AssemblyVersion>
     <FileVersion>1.1.0.0</FileVersion>
-    <Version>2.3.0</Version>
+    <Version>2.4.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

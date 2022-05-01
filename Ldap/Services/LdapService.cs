@@ -389,6 +389,7 @@ namespace NetApp.Security
             var flag = Convert.ToInt32(user.AccountFlag);
             flag = expired ? flag | 0x800000 : flag & ~0x800000;
             SetUserAttributes(username, new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("userAccountControl", flag.ToString()) });
+            SetUserAttributes(username, new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("pwdLastSet", expired ? "0" : "-1") });
         }
         public void SetManager(string username, string managerName)
         {
