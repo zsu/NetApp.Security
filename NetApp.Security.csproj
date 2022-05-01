@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Description>Ldap library for .Net</Description>
+    <Copyright>Zhicheng Su</Copyright>
+    <PackageProjectUrl>https://github.com/zsu/NetApp.Security</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/zsu/NetApp.Security</RepositoryUrl>
+    <PackageTags>Security, Ldap, .Net</PackageTags>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.0.0</FileVersion>
+    <Version>2.0.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Ldap\Extensions\StringExtensions.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NetApp.Common" Version="1.0.0" />
+    <PackageReference Include="Novell.Directory.Ldap.NETStandard2_0" Version="3.1.0" />
+    <PackageReference Include="System.DirectoryServices" Version="6.0.0" />
+    <PackageReference Include="System.DirectoryServices.AccountManagement" Version="6.0.0" />
+  </ItemGroup>
+
+</Project>
