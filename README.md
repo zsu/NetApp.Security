@@ -13,6 +13,7 @@ Install-Package NetApp.Security
 
   * Call the followings in Startup:  
   ```xml
+            services.AddTransient<IEncryptionService, EncryptionService>();
             services.AddTransient<ILdapService, LdapService>();
             services.Configure<LdapSettings>(Configuration.GetSection("Ldap"));
   ```
