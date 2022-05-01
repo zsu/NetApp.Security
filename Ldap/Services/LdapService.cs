@@ -195,7 +195,7 @@ namespace NetApp.Security
         {
             LdapUser user = null;
 
-            var filter = $"(&(objectClass=user)(sAMAccountName={username}))";
+            var filter = $"(&(objectClass=user)(sAMAccountName={username?.Trim()}))";
 
             using (var ldapConnection = this.GetConnection())
             {
@@ -264,108 +264,114 @@ namespace NetApp.Security
 
         //    return this.GetUserByCommonName(name);
         //}
-        public void AddUser(LdapUser user, string container)
-        {
+        //public void AddUser(LdapUser user, string container)
+        //{
 
-            PrincipalContext ctx = new PrincipalContext(ContextType.Domain, _ldapSettings.ServerName + ":" + _ldapSettings.ServerPort, container ?? _ldapSettings.DomainDistinguishedName, _ldapSettings.UseSSL ? ContextOptions.SimpleBind | ContextOptions.SecureSocketLayer : ContextOptions.Negotiate | ContextOptions.Signing | ContextOptions.Sealing, _ldapSettings.Credentials.DomainUserName, _encryptionService.Decrypt(_ldapSettings.Credentials.Password));
-            var item = new UserPrincipal(ctx, user.UserName.Trim(), user.Password, false);
-            item.UserPrincipalName = user.UserName.Trim();
-            item.GivenName = user.FirstName?.Trim();
-            item.Surname = user.LastName?.Trim();
-            string fullName = user.FullName;
-            //newuser.DisplayName = fullName;
-            //newuser.Name = fullName;
-            if (user.EmailAddress != null)
-            {
-                item.EmailAddress = user.EmailAddress;
-            }
-            if (user.Name != null)
-            {
-                item.Name = user.Name;
-            }
-            else
-            {
-                item.Name = fullName;
-            }
-            if (user.DisplayName != null)
-            {
-                item.DisplayName = user.DisplayName?.Trim();
-            }
-            else
-            {
-                item.DisplayName = fullName;
-            }
-            if (user.Description != null)
-            {
-                item.Description = user.Description;
-            }
-            if (user.Phone != null)
-            {
-                item.VoiceTelephoneNumber = user.Phone;
-            }
-            item.Save();
+        //    PrincipalContext ctx = new PrincipalContext(ContextType.Domain, _ldapSettings.ServerName + ":" + _ldapSettings.ServerPort, container ?? _ldapSettings.DomainDistinguishedName, _ldapSettings.UseSSL ? ContextOptions.SimpleBind | ContextOptions.SecureSocketLayer : ContextOptions.Negotiate | ContextOptions.Signing | ContextOptions.Sealing, _ldapSettings.Credentials.DomainUserName, _encryptionService.Decrypt(_ldapSettings.Credentials.Password));
+        //    var item = new UserPrincipal(ctx, user.UserName.Trim(), user.Password, false);
+        //    item.UserPrincipalName = user.UserName.Trim();
+        //    item.GivenName = user.FirstName?.Trim();
+        //    item.Surname = user.LastName?.Trim();
+        //    string fullName = user.FullName;
+        //    //newuser.DisplayName = fullName;
+        //    //newuser.Name = fullName;
+        //    if (user.EmailAddress != null)
+        //    {
+        //        item.EmailAddress = user.EmailAddress;
+        //    }
+        //    if (user.Name != null)
+        //    {
+        //        item.Name = user.Name;
+        //    }
+        //    else
+        //    {
+        //        item.Name = fullName;
+        //    }
+        //    if (user.DisplayName != null)
+        //    {
+        //        item.DisplayName = user.DisplayName?.Trim();
+        //    }
+        //    else
+        //    {
+        //        item.DisplayName = fullName;
+        //    }
+        //    if (user.Description != null)
+        //    {
+        //        item.Description = user.Description;
+        //    }
+        //    if (user.Phone != null)
+        //    {
+        //        item.VoiceTelephoneNumber = user.Phone;
+        //    }
+        //    item.Save();
 
-            if (user.Address?.Street != null)
-            {
-                ((DirectoryEntry)item.GetUnderlyingObject()).Properties["streetAddress"].Value = user.Address.Street;
-            }
-            if (user.Address?.City != null)
-            {
-                ((DirectoryEntry)item.GetUnderlyingObject()).Properties["l"].Value = user.Address.City;
-            }
-            if (user.Address?.PostalCode != null)
-            {
-                ((DirectoryEntry)item.GetUnderlyingObject()).Properties["postalCode"].Value = user.Address.PostalCode;
-            }
-            if (user.Address?.StateName != null)
-            {
-                ((DirectoryEntry)item.GetUnderlyingObject()).Properties["st"].Value = user.Address.StateName;
-            }
-            if (user.Address?.CountryName != null)
-            {
-                ((DirectoryEntry)item.GetUnderlyingObject()).Properties["co"].Value = user.Address.CountryName;
-            }
-            if (user.Address?.CountryCode != null)
-            {
-                ((DirectoryEntry)item.GetUnderlyingObject()).Properties["c"].Value = user.Address.CountryCode;
-            }
-            if (user.MiddleName != null)
-            {
-                ((DirectoryEntry)item.GetUnderlyingObject()).Properties["initials"].Value = user.MiddleName.Trim();
-            }
-            if (user.EmployeeId != null)
-            {
-                ((DirectoryEntry)item.GetUnderlyingObject()).Properties["employeeID"].Value = user.EmployeeId;
-            }
-            if (user.Division != null)
-            {
-                ((DirectoryEntry)item.GetUnderlyingObject()).Properties["division"].Value = user.Division;
-            }
-            if (user.Department != null)
-            {
-                ((DirectoryEntry)item.GetUnderlyingObject()).Properties["department"].Value = user.Department;
-            }
-            if (user.Manager != null)
-            {
-                var manager = GetUserByLogonName(user.Manager);
-                if (manager != null)
-                    ((DirectoryEntry)item.GetUnderlyingObject()).Properties["manager"].Value = manager.DistinguishedName;
-            }
-            if (user.Title != null)
-            {
-                ((DirectoryEntry)item.GetUnderlyingObject()).Properties["title"].Value = user.Title;
-            }
-            item.Save();
-        }
-        public void SetPasswordNeverExpires(string username, bool neverExpire)
+        //    if (user.Address?.Street != null)
+        //    {
+        //        ((DirectoryEntry)item.GetUnderlyingObject()).Properties["streetAddress"].Value = user.Address.Street;
+        //    }
+        //    if (user.Address?.City != null)
+        //    {
+        //        ((DirectoryEntry)item.GetUnderlyingObject()).Properties["l"].Value = user.Address.City;
+        //    }
+        //    if (user.Address?.PostalCode != null)
+        //    {
+        //        ((DirectoryEntry)item.GetUnderlyingObject()).Properties["postalCode"].Value = user.Address.PostalCode;
+        //    }
+        //    if (user.Address?.StateName != null)
+        //    {
+        //        ((DirectoryEntry)item.GetUnderlyingObject()).Properties["st"].Value = user.Address.StateName;
+        //    }
+        //    if (user.Address?.CountryName != null)
+        //    {
+        //        ((DirectoryEntry)item.GetUnderlyingObject()).Properties["co"].Value = user.Address.CountryName;
+        //    }
+        //    if (user.Address?.CountryCode != null)
+        //    {
+        //        ((DirectoryEntry)item.GetUnderlyingObject()).Properties["c"].Value = user.Address.CountryCode;
+        //    }
+        //    if (user.MiddleName != null)
+        //    {
+        //        ((DirectoryEntry)item.GetUnderlyingObject()).Properties["initials"].Value = user.MiddleName.Trim();
+        //    }
+        //    if (user.EmployeeId != null)
+        //    {
+        //        ((DirectoryEntry)item.GetUnderlyingObject()).Properties["employeeID"].Value = user.EmployeeId;
+        //    }
+        //    if (user.Division != null)
+        //    {
+        //        ((DirectoryEntry)item.GetUnderlyingObject()).Properties["division"].Value = user.Division;
+        //    }
+        //    if (user.Department != null)
+        //    {
+        //        ((DirectoryEntry)item.GetUnderlyingObject()).Properties["department"].Value = user.Department;
+        //    }
+        //    if (user.Manager != null)
+        //    {
+        //        var manager = GetUserByLogonName(user.Manager);
+        //        if (manager != null)
+        //            ((DirectoryEntry)item.GetUnderlyingObject()).Properties["manager"].Value = manager.DistinguishedName;
+        //    }
+        //    if (user.Title != null)
+        //    {
+        //        ((DirectoryEntry)item.GetUnderlyingObject()).Properties["title"].Value = user.Title;
+        //    }
+        //    item.Save();
+        //}
+        public void SetPasswordNeverExpires(string username, bool neverExpire)
         {
             if (string.IsNullOrWhiteSpace(username))
                 throw new ArgumentNullException(nameof(username));
-            var user = GetUser(username);
+            //var user = GetUser(username);
+            //if (user == null)
+            //    throw new Exception($"Invalid user {username}.");
+            //user.PasswordNeverExpires = neverExpire;
+            //user.Save();
+            var user = GetUserByLogonName(username);
             if (user == null)
                 throw new Exception($"Invalid user {username}.");
-            user.PasswordNeverExpires = neverExpire;
-            user.Save();
+            var flag = Convert.ToInt32(user.AccountFlag);
+            flag = flag | 0x10000;
+            SetUserAttributes(username, new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("userAccountControl", flag.ToString()) });
         }
         public void SetManager(string username, string managerName)
         {
@@ -374,111 +380,110 @@ namespace NetApp.Security
             string managerDn = null;
             if (!string.IsNullOrWhiteSpace(managerName))
             {
-                var manager = GetUser(managerName);
+                var manager = GetUserByLogonName(managerName);
                 if (manager == null)
                     throw new Exception($"Invalid user {managerName}.");
                 managerDn = manager.DistinguishedName;
             }
             SetUserAttributes(username, new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("manager", managerDn) });
         }
-        //     public void AddUser(LdapUser user, string container)
-        //     {
-        //         var dn = $"CN={user.FirstName} {user.LastName},{container}";
+        public void AddUser(LdapUser user, string container)
+        {
+            var dn = $"CN={user.FullName},{container ?? _ldapSettings.DomainDistinguishedName}";
 
-        //         var attributeSet = new LdapAttributeSet
-        //{
-        // new LdapAttribute("instanceType", "4"),
-        // new LdapAttribute("objectCategory", $"CN=Person,CN=Schema,CN=Configuration,{this._ldapSettings.DomainDistinguishedName}"),
-        // new LdapAttribute("objectClass", new[] {"top", "person", "organizationalPerson", "user"}),
-        // new LdapAttribute("name", user.UserName),
-        // new LdapAttribute("cn", $"{user.FirstName} {user.LastName}"),
-        // new LdapAttribute("sAMAccountName", user.UserName),
-        // new LdapAttribute("userPrincipalName", user.UserName),
-        // new LdapAttribute("unicodePwd", Convert.ToBase64String(Encoding.Unicode.GetBytes($"\"{user.Password}\""))),
-        // new LdapAttribute("userAccountControl", user.MustChangePasswordOnNextLogon ? "544" : "512"),
-        // new LdapAttribute("givenName", user.FirstName),
-        // new LdapAttribute("sn", user.LastName),
-        // //new LdapAttribute("mail", user.EmailAddress)
-        //};
-        //         if (user.EmailAddress != null)
-        //         {
-        //             attributeSet.Add(new LdapAttribute("mail", user.EmailAddress));
-        //         }
-        //         if (user.DisplayName != null)
-        //         {
-        //             attributeSet.Add(new LdapAttribute("displayName", user.DisplayName));
-        //         }
+            var attributeSet = new LdapAttributeSet
+    {
+    new LdapAttribute("instanceType", "4"),
+    new LdapAttribute("objectCategory", $"CN=Person,CN=Schema,CN=Configuration,{this._ldapSettings.DomainDistinguishedName}"),
+    new LdapAttribute("objectClass", new[] {"top", "person", "organizationalPerson", "user"}),
+    new LdapAttribute("name", user.FullName),
+    new LdapAttribute("cn", $"{user.FullName}"),
+    new LdapAttribute("sAMAccountName", user.UserName?.Trim().ToLower()),
+    new LdapAttribute("userPrincipalName", $"{user.UserName.Trim().ToLower()}@{this._ldapSettings.DomainName?.Trim()}"),
+    new LdapAttribute("unicodePwd", SupportClass.ToSByteArray(Encoding.Unicode.GetBytes($"\"{user.Password?.Trim()}\""))),
+    new LdapAttribute("userAccountControl", user.MustChangePasswordOnNextLogon ? "544" : "512"),
+    new LdapAttribute("givenName", user.FirstName?.Trim()),
+    new LdapAttribute("sn", user.LastName?.Trim()),
+         //new LdapAttribute("mail", user.EmailAddress)
+        };
+            if (!string.IsNullOrWhiteSpace(user.EmailAddress))
+            {
+                attributeSet.Add(new LdapAttribute("mail", user.EmailAddress.Trim()));
+            }
+            if (!string.IsNullOrWhiteSpace(user.DisplayName))
+            {
+                attributeSet.Add(new LdapAttribute("displayName", user.DisplayName.Trim()));
+            }
+            else
+                attributeSet.Add(new LdapAttribute("displayName", user.FullName));
+            if (!string.IsNullOrWhiteSpace(user.MiddleName))
+            {
+                attributeSet.Add(new LdapAttribute("initials", user.MiddleName.Trim()));
+            }
+            if (!string.IsNullOrWhiteSpace(user.Description))
+            {
+                attributeSet.Add(new LdapAttribute("description", user.Description.Trim()));
+            }
+            if (!string.IsNullOrWhiteSpace(user.Phone))
+            {
+                attributeSet.Add(new LdapAttribute("telephoneNumber", user.Phone.Trim()));
+            }
+            if (!string.IsNullOrWhiteSpace(user.Address?.Street))
+            {
+                attributeSet.Add(new LdapAttribute("streetAddress", user.Address.Street.Trim()));
+            }
+            if (!string.IsNullOrWhiteSpace(user.Address?.City))
+            {
+                attributeSet.Add(new LdapAttribute("l", user.Address.City.Trim()));
+            }
+            if (!string.IsNullOrWhiteSpace(user.Address?.PostalCode))
+            {
+                attributeSet.Add(new LdapAttribute("postalCode", user.Address.PostalCode.Trim()));
+            }
+            if (!string.IsNullOrWhiteSpace(user.Address?.StateName))
+            {
+                attributeSet.Add(new LdapAttribute("st", user.Address.StateName.Trim()));
+            }
+            if (user.Address?.CountryName != null)
+            {
+                attributeSet.Add(new LdapAttribute("co", user.Address.CountryName));
+            }
+            if (!string.IsNullOrWhiteSpace(user.Address?.CountryCode))
+            {
+                attributeSet.Add(new LdapAttribute("c", user.Address.CountryCode.Trim()));
+            }
+            if (!string.IsNullOrWhiteSpace(user.EmployeeId))
+            {
+                attributeSet.Add(new LdapAttribute("employeeID", user.EmployeeId.Trim()));
+            }
+            if (!string.IsNullOrWhiteSpace(user.Division))
+            {
+                attributeSet.Add(new LdapAttribute("division", user.Division.Trim()));
+            }
+            if (!string.IsNullOrWhiteSpace(user.Department))
+            {
+                attributeSet.Add(new LdapAttribute("department", user.Department.Trim()));
+            }
+            if (!string.IsNullOrWhiteSpace(user.Manager))
+            {
+                var manager = GetUserByLogonName(user.Manager.Trim());
+                if (manager == null)
+                    throw new Exception($"Invalid manager {user.Manager}.");
+                attributeSet.Add(new LdapAttribute("manager", manager.DistinguishedName));
+            }
+            if (!string.IsNullOrWhiteSpace(user.Title))
+            {
+                attributeSet.Add(new LdapAttribute("title", user.Title.Trim()));
+            }
+            var newEntry = new Novell.Directory.Ldap.LdapEntry(dn, attributeSet);
 
-        //         if (user.Description != null)
-        //         {
-        //             attributeSet.Add(new LdapAttribute("description", user.Description));
-        //         }
-        //         if (user.Phone != null)
-        //         {
-        //             attributeSet.Add(new LdapAttribute("telephoneNumber", user.Phone));
-        //         }
-        //         if (user.Address?.Street != null)
-        //         {
-        //             attributeSet.Add(new LdapAttribute("streetAddress", user.Address.Street));
-        //         }
-        //         if (user.Address?.City != null)
-        //         {
-        //             attributeSet.Add(new LdapAttribute("l", user.Address.City));
-        //         }
-        //         if (user.Address?.PostalCode != null)
-        //         {
-        //             attributeSet.Add(new LdapAttribute("postalCode", user.Address.PostalCode));
-        //         }
-        //         if (user.Address?.StateName != null)
-        //         {
-        //             attributeSet.Add(new LdapAttribute("st", user.Address.StateName));
-        //         }
-        //         if (user.Address?.CountryName != null)
-        //         {
-        //             attributeSet.Add(new LdapAttribute("co", user.Address.CountryName));
-        //         }
-        //         if (user.Address?.CountryCode != null)
-        //         {
-        //             attributeSet.Add(new LdapAttribute("c", user.Address.CountryCode));
-        //         }
-        //         if (user.EmployeeId != null)
-        //         {
-        //             attributeSet.Add(new LdapAttribute("employeeID", user.EmployeeId));
-        //         }
-        //         if (user.Division != null)
-        //         {
-        //             attributeSet.Add(new LdapAttribute("division", user.Division));
-        //         }
-        //         if (user.Department != null)
-        //         {
-        //             attributeSet.Add(new LdapAttribute("department", user.Department));
-        //         }
-        //         if (user.Manager != null)
-        //         {
-        //             attributeSet.Add(new LdapAttribute("manager", user.Manager));
-        //         }
-        //         if (user.Title != null)
-        //         {
-        //             attributeSet.Add(new LdapAttribute("title", user.Title));
-        //         }
-        //         var newEntry = new Novell.Directory.Ldap.LdapEntry(dn, attributeSet);
+            using (var ldapConnection = this.GetConnection())
+            {
+                ldapConnection.Add(newEntry);
+            }
+        }
 
-        //         using (var ldapConnection = this.GetConnection())
-        //         {
-        //             ldapConnection.Add(newEntry);
-        //         }
-        //     }
-
-        //public void DeleteUser(string distinguishedName)
-        //{
-        //    using (var ldapConnection = this.GetConnection())
-        //    {
-        //        ldapConnection.Delete(distinguishedName);
-        //    }
-        //}
-
-
-        public bool Authenticate(string distinguishedName, string password)
+        public bool Authenticate(string distinguishedName, string password)
         {
             using (var ldapConnection = new LdapConnection() { SecureSocketLayer = _ldapSettings.UseSSL })
             {
@@ -496,29 +501,34 @@ namespace NetApp.Security
         }
         public void ChangePassword(string username, string password, bool forceChange = true)
         {
-            //if (string.IsNullOrWhiteSpace(username))
-            //    throw new ArgumentNullException("username");
-            //if (string.IsNullOrWhiteSpace(password))
-            //    throw new ArgumentNullException("password");
-            //var user = GetUserByLogonName(username);
-            //if (user == null)
-            //    throw new Exception($"Invalid user {username}.");
-            //var encodedBytes = SupportClass.ToSByteArray(Encoding.Unicode.GetBytes(password));
-            //var attributePassword = new LdapAttribute("unicodePwd", encodedBytes);
-            //using (var ldapConnection = this.GetConnection())
-            //{
-            //    ldapConnection.Modify(user.DistinguishedName, new LdapModification(LdapModification.REPLACE, attributePassword));
-            //}
-            //return true;
-            PrincipalContext ctx = new PrincipalContext(ContextType.Domain, _ldapSettings.ServerName + ":" + _ldapSettings.ServerPort, _ldapSettings.DomainDistinguishedName, _ldapSettings.UseSSL ? ContextOptions.SimpleBind | ContextOptions.SecureSocketLayer : ContextOptions.Negotiate | ContextOptions.Signing | ContextOptions.Sealing, _ldapSettings.Credentials.DomainUserName, _encryptionService.Decrypt(_ldapSettings.Credentials.Password));
-            UserPrincipal user = UserPrincipal.FindByIdentity(ctx, IdentityType.SamAccountName, username);
-            //Reset User Password
-            user.SetPassword(password);
-            //Force user to change password at next logon
-            if (forceChange)
-                user.ExpirePasswordNow();
-            user.Save();
-        }
+            if (string.IsNullOrWhiteSpace(username))
+                throw new ArgumentNullException("username");
+            if (string.IsNullOrWhiteSpace(password))
+                throw new ArgumentNullException("password");
+            var user = GetUserByLogonName(username);
+            if (user == null)
+                throw new Exception($"Invalid user {username}.");
+            var encodedBytes = SupportClass.ToSByteArray(Encoding.Unicode.GetBytes($"\"{password}\""));
+            var attributePassword = new LdapAttribute("unicodePwd", encodedBytes);
+            using (var ldapConnection = this.GetConnection())
+            {
+                ldapConnection.Modify(user.DistinguishedName, new LdapModification(LdapModification.REPLACE, attributePassword));
+            }
+            if (forceChange)
+            {
+                var flag = Convert.ToInt32(user.AccountFlag);
+                flag = flag | 0x800000;
+                SetUserAttributes(username, new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("userAccountControl", flag.ToString()) });
+            }
+            //PrincipalContext ctx = new PrincipalContext(ContextType.Domain, _ldapSettings.ServerName + ":" + _ldapSettings.ServerPort, _ldapSettings.DomainDistinguishedName, _ldapSettings.UseSSL ? ContextOptions.SimpleBind | ContextOptions.SecureSocketLayer : ContextOptions.Negotiate | ContextOptions.Signing | ContextOptions.Sealing, _ldapSettings.Credentials.DomainUserName, _encryptionService.Decrypt(_ldapSettings.Credentials.Password));
+            //UserPrincipal user = UserPrincipal.FindByIdentity(ctx, IdentityType.SamAccountName, username);
+            ////Reset User Password
+            //user.SetPassword(password);
+            ////Force user to change password at next logon
+            //if (forceChange)
+            //    user.ExpirePasswordNow();
+            //user.Save();
+        }
         public List<LdapUser> GetSubordinates(string managerUsername)
         {
             List<LdapUser> user = new List<LdapUser>();
@@ -1156,11 +1166,11 @@ namespace NetApp.Security
             byte[] byteData = Array.ConvertAll(sbyteData, (a) => (byte)a);
             return new Guid(byteData).ToString();
         }
-        private UserPrincipal GetUser(string username)
-        {
-            PrincipalContext ctx = new PrincipalContext(ContextType.Domain, _ldapSettings.ServerName + ":" + _ldapSettings.ServerPort, _ldapSettings.DomainDistinguishedName, _ldapSettings.UseSSL ? ContextOptions.SimpleBind | ContextOptions.SecureSocketLayer : ContextOptions.Negotiate | ContextOptions.Signing | ContextOptions.Sealing, _ldapSettings.Credentials.DomainUserName, _encryptionService.Decrypt(_ldapSettings.Credentials.Password));
-            UserPrincipal user = UserPrincipal.FindByIdentity(ctx, username.Trim());
-            return user;
-        }
-    }
+        //private UserPrincipal GetUserPrincipal(string username)
+        //{
+        //    PrincipalContext ctx = new PrincipalContext(ContextType.Domain, _ldapSettings.ServerName + ":" + _ldapSettings.ServerPort, _ldapSettings.DomainDistinguishedName, _ldapSettings.UseSSL ? ContextOptions.SimpleBind | ContextOptions.SecureSocketLayer : ContextOptions.Negotiate | ContextOptions.Signing | ContextOptions.Sealing, _ldapSettings.Credentials.DomainUserName, _encryptionService.Decrypt(_ldapSettings.Credentials.Password));
+        //    UserPrincipal user = UserPrincipal.FindByIdentity(ctx, username.Trim());
+        //    return user;
+        //}
+    }
 }

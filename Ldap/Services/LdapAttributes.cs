@@ -44,6 +44,8 @@
         public const string UserPrincipalName = "userPrincipalName";
         public const string Department = "department";
         public const string Division = "division";
+        public const string JpegPhoto = "jpegPhoto";
+        public const string ThumbnailPhoto = "thumbnailPhoto";
 
         //group
         public const string Description = "description";
