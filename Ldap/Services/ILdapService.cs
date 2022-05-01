@@ -15,15 +15,15 @@ namespace NetApp.Security
 
         ICollection<LdapUser> GetAllUsers();
 
-        //LdapUser GetAdministrator();
+        //LdapUser GetAdministrator();
 
-        LdapUser GetUserByName(string name);
+        LdapUser GetUserByName(string name);
         LdapUser GetUserByLogonName(string username);
         List<LdapUser> GetUser(string firstname, string lastname);
         List<LdapUser> GetSubordinates(string managerUsername);
         void AddUser(LdapUser user, string password);
-
-        void DeleteUser(string distinguishedName);
+        void Delete(string name, LdapPrincipalType type = LdapPrincipalType.User);
+        //void DeleteUser(string distinguishedName);
 
         bool Authenticate(string distinguishedName, string password);
         void ChangePassword(string username, string password, bool forceChange = true);

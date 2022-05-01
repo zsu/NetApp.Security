@@ -270,7 +270,7 @@ namespace NetApp.Security
             PrincipalContext ctx = new PrincipalContext(ContextType.Domain, _ldapSettings.ServerName + ":" + _ldapSettings.ServerPort, container ?? _ldapSettings.DomainDistinguishedName, _ldapSettings.UseSSL ? ContextOptions.SimpleBind | ContextOptions.SecureSocketLayer : ContextOptions.Negotiate | ContextOptions.Signing | ContextOptions.Sealing, _ldapSettings.Credentials.DomainUserName, _encryptionService.Decrypt(_ldapSettings.Credentials.Password));
             var item = new UserPrincipal(ctx, user.UserName.Trim(), user.Password, false);
             item.UserPrincipalName = user.UserName.Trim();
-            item.GivenName = user.FirstName?.Trim();
+            item.GivenName = user.FirstName?.Trim();
             item.Surname = user.LastName?.Trim();
             string fullName = user.FullName;
             //newuser.DisplayName = fullName;
@@ -469,16 +469,16 @@ namespace NetApp.Security
         //         }
         //     }
 
-        public void DeleteUser(string distinguishedName)
-        {
-            using (var ldapConnection = this.GetConnection())
-            {
-                ldapConnection.Delete(distinguishedName);
-            }
-        }
+        //public void DeleteUser(string distinguishedName)
+        //{
+        //    using (var ldapConnection = this.GetConnection())
+        //    {
+        //        ldapConnection.Delete(distinguishedName);
+        //    }
+        //}
 
 
-        public bool Authenticate(string distinguishedName, string password)
+        public bool Authenticate(string distinguishedName, string password)
         {
             using (var ldapConnection = new LdapConnection() { SecureSocketLayer = _ldapSettings.UseSSL })
             {
@@ -1077,6 +1077,32 @@ namespace NetApp.Security
             }
 
             return items;
+        }
+        public void Delete(string name, LdapPrincipalType type = LdapPrincipalType.User)
+        {
+            string distinguuishedName = null;
+            switch (type)
+            {
+                case LdapPrincipalType.Computer:
+                    if (GetComputers(name)?.Count != 1)
+                        throw new Exception("Restricted to delete one item each call.");
+                    distinguuishedName = GetComputers(name)?.FirstOrDefault()?.DistinguishedName;
+                    break;
+                case LdapPrincipalType.Group:
+                    if (GetGroups(name)?.Count != 1)
+                        throw new Exception("Restricted to delete one item each call.");
+                    distinguuishedName = GetGroups(name)?.FirstOrDefault()?.DistinguishedName;
+                    break;
+                case LdapPrincipalType.User:
+                    distinguuishedName = GetUserByLogonName(name)?.DistinguishedName;
+                    break;
+            }
+            if (string.IsNullOrWhiteSpace(distinguuishedName))
+                throw new Exception($"Invalid name {name}.");
+            using (var ldapConnection = this.GetConnection())
+            {
+                ldapConnection.Delete(distinguuishedName);
+            }
         }
         //public List<string> GetComputers(string name, string container=null)
         //{
