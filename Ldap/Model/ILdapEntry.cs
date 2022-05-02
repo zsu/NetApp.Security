@@ -1,6 +1,6 @@
 ﻿namespace NetApp.Security
 {
-    interface ILdapEntry
+    public interface ILdapEntry
     {
         string ObjectSid { get; set; }
         string ObjectGuid { get; set; }

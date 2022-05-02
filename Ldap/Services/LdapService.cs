@@ -24,11 +24,11 @@ namespace NetApp.Security
 
         protected readonly string[] _attributes =
         {
- "objectSid", "objectGUID", "objectCategory", "objectClass", "memberOf", "name", "cn", "distinguishedName",
- "sAMAccountName", "userPrincipalName", "displayName", "givenName", "sn", "description",
- "telephoneNumber", "mail", "streetAddress", "postalCode", "l", "st", "co", "c",
- "department","division","manager","title","userAccountControl","employeeID","initials"
- };
+"objectSid", "objectGUID", "objectCategory", "objectClass", "memberOf", "name", "cn", "distinguishedName",
+"sAMAccountName", "userPrincipalName", "displayName", "givenName", "sn", "description",
+"telephoneNumber", "mail", "streetAddress", "postalCode", "l", "st", "co", "c",
+"department","division","manager","title","userAccountControl","employeeID","initials"
+};
         public LdapService(LdapSettings ldapSettings)
         {
             this._ldapSettings = ldapSettings;
@@ -56,8 +56,7 @@ namespace NetApp.Security
         public ICollection<LdapEntry> GetGroups(string groupName, bool getChildGroups = false)
         {
             var groups = new Collection<LdapEntry>();
-
-            var filter = $"(&(objectClass=group)(cn={groupName}))";
+            var filter = $"(&(objectClass=group)(cn={Microsoft.Security.Application.Encoder.LdapFilterEncode(groupName)}))";
 
             using (var ldapConnection = this.GetConnection())
             {
@@ -95,7 +94,7 @@ namespace NetApp.Security
                 }
             }
 
-            return groups;
+            return groups.DistinctBy(x => x.Name).ToList();
         }
 
         public ICollection<LdapUser> GetAllUsers()
@@ -124,13 +123,12 @@ namespace NetApp.Security
                 }
             }
 
-            return users;
+            return users.DistinctBy(x => x.Name).ToList();
         }
 
         public ICollection<LdapUser> GetUsersByEmailAddress(string emailAddress)
         {
             var users = new Collection<LdapUser>();
-
             var filter = $"(&(objectClass=user)(mail={emailAddress}))";
 
             using (var ldapConnection = this.GetConnection())
@@ -164,6 +162,7 @@ namespace NetApp.Security
             LdapUser user = null;
 
             var filter = $"(&(objectClass=user)(name={name}))";
+            filter = Microsoft.Security.Application.Encoder.LdapFilterEncode(filter);
 
             using (var ldapConnection = this.GetConnection())
             {
@@ -409,18 +408,18 @@ namespace NetApp.Security
             var dn = $"CN={user.FullName},{container ?? _ldapSettings.DomainDistinguishedName}";
 
             var attributeSet = new LdapAttributeSet
-    {
-    new LdapAttribute("instanceType", "4"),
-    new LdapAttribute("objectCategory", $"CN=Person,CN=Schema,CN=Configuration,{this._ldapSettings.DomainDistinguishedName}"),
-    new LdapAttribute("objectClass", new[] {"top", "person", "organizationalPerson", "user"}),
-    new LdapAttribute("name", user.FullName),
-    new LdapAttribute("cn", $"{user.FullName}"),
-    new LdapAttribute("sAMAccountName", user.UserName?.Trim().ToLower()),
-    new LdapAttribute("userPrincipalName", $"{user.UserName.Trim().ToLower()}@{this._ldapSettings.DomainName?.Trim()}"),
-    new LdapAttribute("unicodePwd", SupportClass.ToSByteArray(Encoding.Unicode.GetBytes($"\"{user.Password?.Trim()}\""))),
-    new LdapAttribute("userAccountControl", user.MustChangePasswordOnNextLogon ? "544" : "512"),
-    new LdapAttribute("givenName", user.FirstName?.Trim()),
-    new LdapAttribute("sn", user.LastName?.Trim()),
+ {
+ new LdapAttribute("instanceType", "4"),
+ new LdapAttribute("objectCategory", $"CN=Person,CN=Schema,CN=Configuration,{this._ldapSettings.DomainDistinguishedName}"),
+ new LdapAttribute("objectClass", new[] {"top", "person", "organizationalPerson", "user"}),
+ new LdapAttribute("name", user.FullName),
+ new LdapAttribute("cn", $"{user.FullName}"),
+ new LdapAttribute("sAMAccountName", user.UserName?.Trim().ToLower()),
+ new LdapAttribute("userPrincipalName", $"{user.UserName.Trim().ToLower()}@{this._ldapSettings.DomainName?.Trim()}"),
+ new LdapAttribute("unicodePwd", SupportClass.ToSByteArray(Encoding.Unicode.GetBytes($"\"{user.Password?.Trim()}\""))),
+ new LdapAttribute("userAccountControl", user.MustChangePasswordOnNextLogon ? "544" : "512"),
+ new LdapAttribute("givenName", user.FirstName?.Trim()),
+ new LdapAttribute("sn", user.LastName?.Trim()),
          //new LdapAttribute("mail", user.EmailAddress)
         };
             if (!string.IsNullOrWhiteSpace(user.EmailAddress))
@@ -553,7 +552,7 @@ namespace NetApp.Security
             if (manager == null)
                 throw new Exception($"{managerUsername} cannot be found.");
 
-            var filter = $"(&(objectClass=user)(manager={manager.DistinguishedName}))";
+            var filter = $"(&(objectClass=user)(manager={Microsoft.Security.Application.Encoder.LdapFilterEncode(manager.DistinguishedName)}))";
 
             using (var ldapConnection = this.GetConnection())
             {
@@ -582,7 +581,7 @@ namespace NetApp.Security
             return user;
         }
 
-        private ICollection<T> GetChildren<T>(string searchBase, string groupDistinguishedName = null, bool recursive = true)
+        protected virtual ICollection<T> GetChildren<T>(string searchBase, string groupDistinguishedName = null, bool recursive = true)
         where T : ILdapEntry, new()
         {
             var entries = new Collection<T>();
@@ -595,7 +594,7 @@ namespace NetApp.Security
                 objectClass = "group";
                 objectCategory = "group";
 
-                entries = this.GetChildren(this._searchBase, groupDistinguishedName, objectCategory, objectClass, recursive)
+                entries = this.GetChildren(searchBase ?? this._searchBase, groupDistinguishedName, objectCategory, objectClass, recursive)
                 .Cast<T>().ToCollection();
 
             }
@@ -605,7 +604,7 @@ namespace NetApp.Security
                 objectCategory = "person";
                 objectClass = "user";
 
-                entries = this.GetChildren(this._searchBase, groupDistinguishedName, objectCategory, objectClass, recursive).Cast<T>()
+                entries = this.GetChildren(searchBase ?? this._searchBase, groupDistinguishedName, objectCategory, objectClass, recursive).Cast<T>()
                 .ToCollection();
 
             }
@@ -613,19 +612,18 @@ namespace NetApp.Security
             return entries;
         }
 
-        private ICollection<ILdapEntry> GetChildren(string searchBase, string groupDistinguishedName = null,
+        protected virtual ICollection<ILdapEntry> GetChildren(string searchBase, string groupDistinguishedName = null,
         string objectCategory = "*", string objectClass = "*", bool recursive = true)
         {
             var allChildren = new Collection<ILdapEntry>();
-
             var filter = string.IsNullOrEmpty(groupDistinguishedName)
             ? $"(&(objectCategory={objectCategory})(objectClass={objectClass}))"
-            : (recursive ? $"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf: 1.2.840.113556.1.4.1941:={groupDistinguishedName}))" : $"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf={groupDistinguishedName}))");
+            : ($"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf={Microsoft.Security.Application.Encoder.LdapFilterEncode(groupDistinguishedName)}))");
 
             using (var ldapConnection = this.GetConnection())
             {
                 var search = ldapConnection.Search(
-                searchBase,
+                searchBase ??= this._searchBase,
                 LdapConnection.SCOPE_SUB,
                 filter,
                 this._attributes,
@@ -647,28 +645,106 @@ namespace NetApp.Security
                     if (objectClass == "group")
                     {
                         allChildren.Add(this.CreateEntryFromAttributes(entry.DN, entry.getAttributeSet()));
-                        //if (recursive)
-                        //{
-                        //    foreach (var child in this.GetChildren(string.Empty, entry.DN, objectCategory, objectClass, recursive))
-                        //    {
-                        //        allChildren.Add(child);
-                        //    }
-                        //}
-                    }
+                        if (recursive)
+                        {
+                            foreach (var child in this.GetChildren(searchBase, entry.DN, objectCategory, objectClass, recursive))
+                            {
+                                allChildren.Add(child);
+                            }
+                        }
+                    }
 
                     if (objectClass == "user")
                     {
                         allChildren.Add(this.CreateUserFromAttributes(entry.DN, entry.getAttributeSet()));
                     }
-
-                ;
                 }
             }
 
             return allChildren;
         }
+        protected virtual ICollection<T> GetParent<T>(string searchBase, string groupDistinguishedName = null, bool recursive = true) where T : ILdapEntry, new()
+        {
+            var entries = new Collection<T>();
 
-        private LdapUser CreateUserFromAttributes(string distinguishedName, LdapAttributeSet attributeSet)
+            var objectCategory = "*";
+            var objectClass = "*";
+
+            if (typeof(T) == typeof(LdapEntry))
+            {
+                objectClass = "group";
+                objectCategory = "group";
+
+                entries = this.GetParent(searchBase ?? this._searchBase, groupDistinguishedName, objectCategory, objectClass, recursive)
+                .Cast<T>().ToCollection();
+
+            }
+
+            if (typeof(T) == typeof(LdapUser))
+            {
+                objectCategory = "person";
+                objectClass = "user";
+
+                entries = this.GetParent(searchBase ?? this._searchBase, groupDistinguishedName, objectCategory, objectClass, recursive).Cast<T>()
+                .ToCollection();
+
+            }
+
+            return entries;
+        }
+
+        protected virtual ICollection<ILdapEntry> GetParent(string searchBase, string groupDistinguishedName = null,
+        string objectCategory = "*", string objectClass = "*", bool recursive = true)
+        {
+            var allChildren = new Collection<ILdapEntry>();
+
+            var filter = string.IsNullOrEmpty(groupDistinguishedName)
+            ? $"(&(objectCategory={objectCategory})(objectClass={objectClass}))"
+            : ($"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={Microsoft.Security.Application.Encoder.LdapFilterEncode(groupDistinguishedName)}))");
+            using (var ldapConnection = this.GetConnection())
+            {
+                var search = ldapConnection.Search(
+                searchBase ??= this._searchBase,
+                LdapConnection.SCOPE_SUB,
+                filter,
+                this._attributes,
+                false,
+                null,
+                null);
+
+                LdapMessage message;
+
+                while ((message = search.getResponse()) != null)
+                {
+                    if (!(message is LdapSearchResult searchResultMessage))
+                    {
+                        continue;
+                    }
+
+                    var entry = searchResultMessage.Entry;
+
+                    if (objectClass == "group")
+                    {
+                        allChildren.Add(this.CreateEntryFromAttributes(entry.DN, entry.getAttributeSet()));
+                        if (recursive)
+                        {
+                            foreach (var child in this.GetParent(searchBase, entry.DN, objectCategory, objectClass, recursive))
+                            {
+                                allChildren.Add(child);
+                            }
+                        }
+                    }
+
+                    if (objectClass == "user")
+                    {
+                        allChildren.Add(this.CreateUserFromAttributes(entry.DN, entry.getAttributeSet()));
+                    }
+                }
+            }
+
+            return allChildren;
+        }
+        protected LdapUser CreateUserFromAttributes(string distinguishedName, LdapAttributeSet attributeSet)
         {
             var ldapUser = new LdapUser
             {
@@ -713,7 +789,7 @@ namespace NetApp.Security
             return ldapUser;
         }
 
-        private LdapEntry CreateEntryFromAttributes(string distinguishedName, LdapAttributeSet attributeSet)
+        protected LdapEntry CreateEntryFromAttributes(string distinguishedName, LdapAttributeSet attributeSet)
         {
             return new LdapEntry
             {
@@ -887,6 +963,8 @@ namespace NetApp.Security
             if (string.IsNullOrWhiteSpace(username) || groups == null || groups.Count() == 0)
                 return false;
             var userGroups = GetUserGroups(username, checkNested);//checkNested?GetNestedGroupsForUser(username) : GetGroupsForUser(username);
+            if (userGroups == null || userGroups.Count() <= 1)
+                return false;
             //if (userGroups.Intersect(groups).Any())
             //    return true;
             foreach (var item in groups)
@@ -1001,62 +1079,76 @@ namespace NetApp.Security
         //}
         public List<string> GetUserGroups(string username, bool recursive = true)
         {
-            List<LdapEntry> groups = null;// new Collection<LdapEntry>();
+            ICollection<ILdapEntry> groups = null;// new Collection<LdapEntry>();
             if (!string.IsNullOrWhiteSpace(username))
             {
                 var distinguishedName = GetUserByLogonName(username)?.DistinguishedName;
                 if (string.IsNullOrWhiteSpace(distinguishedName))
                     throw new Exception($"Invalid user {username}.");
-                groups = new List<LdapEntry>();
-                var filter = recursive ? $"(&(objectCategory=group)(member:1.2.840.113556.1.4.1941:={distinguishedName}))" : $"(&(objectCategory=group)(member={distinguishedName}))";
-                using (var ldapConnection = this.GetConnection())
-                {
-                    var search = ldapConnection.Search(
-                    this._searchBase,
-                    LdapConnection.SCOPE_SUB,
-                    filter,
-                    this._attributes,
-                    false,
-                    null,
-                    null);
-                    LdapMessage message;
-                    while ((message = search.getResponse()) != null)
-                    {
-                        if (!(message is LdapSearchResult searchResultMessage))
-                        {
-                            continue;
-                        }
-                        var entry = searchResultMessage.Entry;
-                        groups.Add(this.CreateEntryFromAttributes(entry.DN, entry.getAttributeSet()));
-                    }
-                }
+                groups = GetParent(null, distinguishedName, "*", "group", recursive);
             }
-            return groups?.Select(x => x.Name).ToList();
-            //List<string> groups = null;
-            //if (!string.IsNullOrEmpty(username))
-            //{
-            //    var distinguishedName = GetUserByLogonName(username)?.DistinguishedName;
-            //    if (string.IsNullOrWhiteSpace(distinguishedName))
-            //        return null;
-            //    groups = new List<string>();
-            //    var getGroupsFilterForDn = recursive ? $"(&(objectCategory=group)(member:1.2.840.113556.1.4.1941:={distinguishedName}))" : $"(&(objectCategory=group)(member={distinguishedName}))";
-            //    using (DirectorySearcher dirSearch = new DirectorySearcher())
-            //    {
-            //        dirSearch.Filter = getGroupsFilterForDn;
-            //        dirSearch.PropertiesToLoad.Add("name");
+            return groups?.Select(x => x.Name).Distinct().ToList();
 
-            //        using (var results = dirSearch.FindAll())
-            //        {
-            //            foreach (SearchResult result in results)
-            //            {
-            //                if (result.Properties.Contains("name"))
-            //                    groups.Add((string)result.Properties["name"][0]);
-            //            }
-            //        }
-            //    }
-            //}
-            //return groups;
-        }
+            //    groups = new List<LdapEntry>();
+            //    var filter = $"(&(objectCategory=group)(member={distinguishedName}))";
+            //    using (var ldapConnection = this.GetConnection())
+            //    {
+            //        var search = ldapConnection.Search(
+            //        this._searchBase,
+            //        LdapConnection.SCOPE_SUB,
+            //        filter,
+            //        this._attributes,
+            //        false,
+            //        null,
+            //        null);
+            //        LdapMessage message;
+            //        while ((message = search.getResponse()) != null)
+            //        {
+            //            if (!(message is LdapSearchResult searchResultMessage))
+            //            {
+            //                continue;
+            //            }
+            //            var entry = searchResultMessage.Entry;
+            //            groups.Add(this.CreateEntryFromAttributes(entry.DN, entry.getAttributeSet()));
+            //            if (!recursive)
+            //            {
+            //                continue;
+            //            }
+
+            //            foreach (var child in this.GetChildren<LdapEntry>(string.Empty, entry.DN))
+            //            {
+            //                groups.Add(child);
+            //            }
+            //        }
+            //    }
+            //}
+            //return groups?.Select(x => x.Name).ToList();
+
+            //List<string> groups = null;
+            //if (!string.IsNullOrEmpty(username))
+            //{
+            //    var distinguishedName = GetUserByLogonName(username)?.DistinguishedName;
+            //    if (string.IsNullOrWhiteSpace(distinguishedName))
+            //        return null;
+            //    groups = new List<string>();
+            //    var getGroupsFilterForDn = recursive ? $"(&(objectCategory=group)(member:1.2.840.113556.1.4.1941:={distinguishedName}))" : $"(&(objectCategory=group)(member={distinguishedName}))";
+            //    using (DirectorySearcher dirSearch = new DirectorySearcher())
+            //    {
+            //        dirSearch.Filter = getGroupsFilterForDn;
+            //        dirSearch.PropertiesToLoad.Add("name");
+
+            //        using (var results = dirSearch.FindAll())
+            //        {
+            //            foreach (SearchResult result in results)
+            //            {
+            //                if (result.Properties.Contains("name"))
+            //                    groups.Add((string)result.Properties["name"][0]);
+            //            }
+            //        }
+            //    }
+            //}
+            //return groups;
+        }
         public void SetUserAttributes(string username, List<KeyValuePair<string, string>> attributes)
         {
             List<string> result = new List<string>();
@@ -1123,7 +1215,7 @@ namespace NetApp.Security
                 throw new ArgumentNullException(nameof(name));
             var items = new Collection<LdapEntry>();
 
-            var filter = $"(&(objectClass=Computer)(cn={name}))";
+            var filter = $"(&(objectClass=Computer)(cn={Microsoft.Security.Application.Encoder.LdapFilterEncode(name)}))";
 
             using (var ldapConnection = this.GetConnection())
             {
@@ -1237,5 +1329,5 @@ namespace NetApp.Security
         //    UserPrincipal user = UserPrincipal.FindByIdentity(ctx, username.Trim());
         //    return user;
         //}
-    }
+    }
 }
