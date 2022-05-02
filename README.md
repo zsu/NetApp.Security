@@ -7,6 +7,8 @@ Ldap library for .Net
 
 # NuGet
 ```xml
+Install-Package NetApp.Security.Windows (Contains additional functions targeting windows platform)
+or
 Install-Package NetApp.Security
 ```
 # Getting started with NetApp.Security
