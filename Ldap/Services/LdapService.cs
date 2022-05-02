@@ -11,19 +11,18 @@ using NetApp.Security.Extensions;
 using NetApp.Common;
 using System.Text.RegularExpressions;
 //using System.DirectoryServices;
-using System.IO;
 
 namespace NetApp.Security
 {
     public class LdapService : ILdapService
     {
         //public const string CacheKeyADGroups = "ADGroups";
-        private readonly string _searchBase;
+        protected readonly string _searchBase;
 
-        private readonly LdapSettings _ldapSettings;
-        private readonly IEncryptionService _encryptionService;
+        protected readonly LdapSettings _ldapSettings;
+        protected readonly IEncryptionService _encryptionService;
 
-        private readonly string[] _attributes =
+        protected readonly string[] _attributes =
         {
  "objectSid", "objectGUID", "objectCategory", "objectClass", "memberOf", "name", "cn", "distinguishedName",
  "sAMAccountName", "userPrincipalName", "displayName", "givenName", "sn", "description",
@@ -42,7 +41,7 @@ namespace NetApp.Security
             _encryptionService = encryptionService;
         }
 
-        private ILdapConnection GetConnection()
+        protected ILdapConnection GetConnection()
         {
             var ldapConnection = new LdapConnection() { SecureSocketLayer = this._ldapSettings.UseSSL };
 
@@ -405,52 +404,6 @@ namespace NetApp.Security
             }
             SetUserAttributes(username, new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("manager", managerDn) });
         }
-        public void UpdatePhoto(string username, Stream stream)
-        {
-            int size = 96;
-            if (string.IsNullOrWhiteSpace(username))
-                throw new ArgumentNullException(nameof(username));
-            var user = GetUserByLogonName(username);
-            if (user == null)
-                throw new Exception($"User {username} not found.");
-            byte[] bytes = null;
-            using (var ms = new MemoryStream())
-            {
-                stream.CopyTo(ms);
-                bytes = ms.ToArray();
-            }
-            var changes = new LdapModification(LdapModification.REPLACE, new LdapAttribute("jpegPhoto", SupportClass.ToSByteArray(bytes)));
-            using (var ldapConnection = this.GetConnection())
-            {
-                ldapConnection.Modify(user.DistinguishedName, changes);
-            }
-            System.Drawing.Image img = System.Drawing.Image.FromStream(stream);
-
-            if (img.Size.Width > size || img.Size.Height > size)
-            {
-                System.Drawing.Image resized = ResizeImage(img, new System.Drawing.Size(size, size));
-                using (var ms = new MemoryStream())
-                {
-                    resized.Save(ms, System.Drawing.Imaging.ImageFormat.Bmp);
-                    bytes = ms.ToArray();
-                }
-            }
-            changes = new LdapModification(LdapModification.REPLACE, new LdapAttribute("thumbnailPhoto", SupportClass.ToSByteArray(bytes)));
-            using (var ldapConnection = this.GetConnection())
-            {
-                ldapConnection.Modify(user.DistinguishedName, changes);
-            }
-            //using (var img = Image.FromStream(stream))
-            //{
-            //    ImageConverter converter = new ImageConverter();
-            //    byte[] bytes = (byte[])converter.ConvertTo(img, typeof(byte[]));
-            //    var changes = new LdapModification(LdapModification.REPLACE, new LdapAttribute("jpegPhoto", SupportClass.ToSByteArray(bytes)));
-            //    using (var ldapConnection = this.GetConnection())
-            //    {
-            //        ldapConnection.Modify(user.DistinguishedName, changes);
-            //    }
-            //}
-        }
         public void AddUser(LdapUser user, string container)
         {
             var dn = $"CN={user.FullName},{container ?? _ldapSettings.DomainDistinguishedName}";
@@ -1284,32 +1237,5 @@ namespace NetApp.Security
         //    UserPrincipal user = UserPrincipal.FindByIdentity(ctx, username.Trim());
         //    return user;
         //}
-        private System.Drawing.Image ResizeImage(System.Drawing.Image image, System.Drawing.Size size, bool preserveAspectRatio = true)
-        {
-            int newWidth;
-            int newHeight;
-            if (preserveAspectRatio)
-            {
-                int originalWidth = image.Width;
-                int originalHeight = image.Height;
-                float percentWidth = (float)size.Width / (float)originalWidth;
-                float percentHeight = (float)size.Height / (float)originalHeight;
-                float percent = percentHeight < percentWidth ? percentHeight : percentWidth;
-                newWidth = (int)(originalWidth * percent);
-                newHeight = (int)(originalHeight * percent);
-            }
-            else
-            {
-                newWidth = size.Width;
-                newHeight = size.Height;
-            }
-            System.Drawing.Image newImage = new System.Drawing.Bitmap(newWidth, newHeight);
-            using (System.Drawing.Graphics graphicsHandle = System.Drawing.Graphics.FromImage(newImage))
-            {
-                graphicsHandle.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                graphicsHandle.DrawImage(image, 0, 0, newWidth, newHeight);
-            }
-            return newImage;
-        }
     }
 }

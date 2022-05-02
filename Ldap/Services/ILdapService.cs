@@ -40,6 +40,5 @@ namespace NetApp.Security
         void SetPasswordNeverExpires(string username, bool neverExpire);
         void SetPasswordExpired(string username, bool expired = true);
         void ChangeOU(string username, string ouDistinguishedName);
-        void UpdatePhoto(string username, Stream stream);
     }
 }
