@@ -29,9 +29,9 @@ namespace NetApp.Security
 "telephoneNumber", "mail", "streetAddress", "postalCode", "l", "st", "co", "c",
 "department","division","manager","title","userAccountControl","employeeID","initials"
 };
-        public LdapService(LdapSettings ldapSettings)
+        public LdapService(IOptions<LdapSettings> options)
         {
-            this._ldapSettings = ldapSettings;
+            this._ldapSettings = options.Value;
             this._searchBase = this._ldapSettings.SearchBase;
         }
         public LdapService(IOptions<LdapSettings> ldapSettingsOptions, IEncryptionService encryptionService)
@@ -48,7 +48,7 @@ namespace NetApp.Security
             //Connect function will create a socket connection to the server - Port 389 for insecure and 3269 for secure    
             ldapConnection.Connect(this._ldapSettings.ServerName, this._ldapSettings.ServerPort);
             //Bind function with null user dn and password value will perform anonymous bind to LDAP server 
-            ldapConnection.Bind(this._ldapSettings.Credentials.DomainUserName, _encryptionService.Decrypt(this._ldapSettings.Credentials.Password));
+            ldapConnection.Bind(this._ldapSettings.Credentials.DomainUserName, _encryptionService!=null?_encryptionService.Decrypt(this._ldapSettings.Credentials.Password): this._ldapSettings.Credentials.Password);
 
             return ldapConnection;
         }
