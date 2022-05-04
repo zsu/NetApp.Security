@@ -805,12 +805,12 @@ namespace NetApp.Security
             };
         }
 
-        private SecurityIdentifier GetDomainSid()
-        {
-            var administratorAcount = new NTAccount(this._ldapSettings.DomainName, "administrator");
-            var administratorSId = (SecurityIdentifier)administratorAcount.Translate(typeof(SecurityIdentifier));
-            return administratorSId.AccountDomainSid;
-        }
+        //private SecurityIdentifier GetDomainSid()
+        //{
+        //    var administratorAcount = new NTAccount(this._ldapSettings.DomainName, "administrator");
+        //    var administratorSId = (SecurityIdentifier)administratorAcount.Translate(typeof(SecurityIdentifier));
+        //    return administratorSId.AccountDomainSid;
+        //}
 
         private IEnumerable<string> GetGroupsForUser(string username)
         {
@@ -861,8 +861,7 @@ namespace NetApp.Security
             while (groups.Count > 0)
             {
                 string group = groups.Pop();
-                if (uniqueGroups.Add(group))
-                    ;//yield return group;
+                uniqueGroups.Add(group);
 
                 foreach (string parentGroup in this.GetGroupsForUserCore(group))
                     groups.Push(parentGroup);
