@@ -102,7 +102,7 @@ namespace NetApp.Security.Windows
 
             var filter = string.IsNullOrEmpty(groupDistinguishedName)
             ? $"(&(objectCategory={objectCategory})(objectClass={objectClass}))"
-            : (recursive ? $"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf:1.2.840.113556.1.4.1941:={Microsoft.Security.Application.Encoder.LdapDistinguishedNameEncode(groupDistinguishedName)}))" : $"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf={Microsoft.Security.Application.Encoder.LdapDistinguishedNameEncode(groupDistinguishedName)}))");
+            : (recursive ? $"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf:1.2.840.113556.1.4.1941:={Microsoft.Security.Application.Encoder.LdapEncode(groupDistinguishedName)}))" : $"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf={Microsoft.Security.Application.Encoder.LdapEncode(groupDistinguishedName)}))");
 
             using (var ldapConnection = this.GetConnection())
             {
@@ -184,7 +184,7 @@ namespace NetApp.Security.Windows
 
             var filter = string.IsNullOrEmpty(groupDistinguishedName)
             ? $"(&(objectCategory={objectCategory})(objectClass={objectClass}))"
-            : (recursive ? $"(&(objectCategory={objectCategory})(objectClass={objectClass})(member:1.2.840.113556.1.4.1941:={Microsoft.Security.Application.Encoder.LdapDistinguishedNameEncode(groupDistinguishedName)}))" : $"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={Microsoft.Security.Application.Encoder.LdapDistinguishedNameEncode(groupDistinguishedName)}))");
+            : (recursive ? $"(&(objectCategory={objectCategory})(objectClass={objectClass})(member:1.2.840.113556.1.4.1941:={Microsoft.Security.Application.Encoder.LdapEncode(groupDistinguishedName)}))" : $"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={Microsoft.Security.Application.Encoder.LdapEncode(groupDistinguishedName)}))");
 
             using (var ldapConnection = this.GetConnection())
             {
