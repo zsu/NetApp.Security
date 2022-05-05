@@ -15,12 +15,21 @@ Install-Package NetApp.Security
 
   * Call the followings in Startup:  
   ```xml
-            services.AddTransient<IEncryptionService, EncryptionService>();
-            services.AddTransient<ILdapService, LdapService>();
-            services.Configure<LdapSettings>(Configuration.GetSection("Ldap"));
+     services.AddEncryptionService(options => {
+           options.Key=Configuration.GetValue<string>("Encryption:Key");
+           options.Iv = Configuration.GetValue<string>("Encryption:Iv");
+       });
+       services.AddLdapService(options => {
+           Configuration.GetSection("Ldap").Bind(options);
+       });
   ```
   * appsettings.json:  
   ```xml
+    //AES Key and Iv
+    "Encryption": {
+      "Key": "xxxx",
+      "Iv": "xx"
+    },
     "Ldap": {
       "ServerName": "xxx",
       "ServerPort": 636,
