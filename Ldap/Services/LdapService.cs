@@ -48,7 +48,7 @@ namespace NetApp.Security
             //Connect function will create a socket connection to the server - Port 389 for insecure and 3269 for secure    
             ldapConnection.Connect(this._ldapSettings.ServerName, this._ldapSettings.ServerPort);
             //Bind function with null user dn and password value will perform anonymous bind to LDAP server 
-            ldapConnection.Bind(this._ldapSettings.Credentials.DomainUserName, _encryptionService!=null?_encryptionService.Decrypt(this._ldapSettings.Credentials.Password): this._ldapSettings.Credentials.Password);
+            ldapConnection.Bind(this._ldapSettings.Credentials.DomainUserName, _encryptionService != null ? _encryptionService.Decrypt(this._ldapSettings.Credentials.Password) : this._ldapSettings.Credentials.Password);
 
             return ldapConnection;
         }
@@ -161,9 +161,7 @@ namespace NetApp.Security
         {
             LdapUser user = null;
 
-            var filter = $"(&(objectClass=user)(name={name}))";
-            filter = Microsoft.Security.Application.Encoder.LdapFilterEncode(filter);
-
+            var filter = $"(&(objectClass=user)(name={Microsoft.Security.Application.Encoder.LdapFilterEncode(name)}))";
             using (var ldapConnection = this.GetConnection())
             {
                 var search = ldapConnection.Search(
@@ -552,7 +550,7 @@ namespace NetApp.Security
             if (manager == null)
                 throw new Exception($"{managerUsername} cannot be found.");
 
-            var filter = $"(&(objectClass=user)(manager={Microsoft.Security.Application.Encoder.LdapFilterEncode(manager.DistinguishedName)}))";
+            var filter = $"(&(objectClass=user)(manager={Microsoft.Security.Application.Encoder.LdapDistinguishedNameEncode(manager.DistinguishedName)}))";
 
             using (var ldapConnection = this.GetConnection())
             {
@@ -618,7 +616,7 @@ namespace NetApp.Security
             var allChildren = new Collection<ILdapEntry>();
             var filter = string.IsNullOrEmpty(groupDistinguishedName)
             ? $"(&(objectCategory={objectCategory})(objectClass={objectClass}))"
-            : ($"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf={Microsoft.Security.Application.Encoder.LdapFilterEncode(groupDistinguishedName)}))");
+            : ($"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf={Microsoft.Security.Application.Encoder.LdapDistinguishedNameEncode(groupDistinguishedName)}))");
 
             using (var ldapConnection = this.GetConnection())
             {
@@ -700,7 +698,7 @@ namespace NetApp.Security
 
             var filter = string.IsNullOrEmpty(groupDistinguishedName)
             ? $"(&(objectCategory={objectCategory})(objectClass={objectClass}))"
-            : ($"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={Microsoft.Security.Application.Encoder.LdapFilterEncode(groupDistinguishedName)}))");
+            : ($"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={Microsoft.Security.Application.Encoder.LdapDistinguishedNameEncode(groupDistinguishedName)}))");
             using (var ldapConnection = this.GetConnection())
             {
                 var search = ldapConnection.Search(
@@ -863,7 +861,7 @@ namespace NetApp.Security
                 string group = groups.Pop();
                 uniqueGroups.Add(group);
 
-                foreach (string parentGroup in this.GetGroupsForUserCore(group))
+                foreach (string parentGroup in this.GetGroupsForUserCore(group))
                     groups.Push(parentGroup);
             }
             if (items == null)
