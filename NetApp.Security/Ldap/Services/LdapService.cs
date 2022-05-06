@@ -252,6 +252,66 @@ namespace NetApp.Security
 
             return user;
         }
+        public virtual LdapUser GetUserByGuid(string guid, string container = null)
+        {
+            var filter = $"(&(objectClass=user)(objectGUID={ConvertGuidToOctetString(guid)}))";
+
+            using (var ldapConnection = this.GetConnection())
+            {
+                var search = ldapConnection.Search(
+                container ?? this._searchBase,
+                LdapConnection.SCOPE_SUB,
+                filter,
+                this._attributes,
+                false,
+                null,
+                null);
+
+                LdapMessage message;
+
+                while ((message = search.getResponse()) != null)
+                {
+                    if (!(message is LdapSearchResult searchResultMessage))
+                    {
+                        continue;
+                    }
+
+                    return (this.CreateUserFromAttributes(this._searchBase, searchResultMessage.Entry.getAttributeSet()));
+                }
+            }
+
+            return null;
+        }
+        public virtual LdapEntry GetByGuid(string guid, string container = null)
+        {
+            var filter = $"(&(objectClass=*)(objectGUID={ConvertGuidToOctetString(guid)}))";
+
+            using (var ldapConnection = this.GetConnection())
+            {
+                var search = ldapConnection.Search(
+                container ?? this._searchBase,
+                LdapConnection.SCOPE_SUB,
+                filter,
+                this._attributes,
+                false,
+                null,
+                null);
+
+                LdapMessage message;
+
+                while ((message = search.getResponse()) != null)
+                {
+                    if (!(message is LdapSearchResult searchResultMessage))
+                    {
+                        continue;
+                    }
+
+                    return (this.CreateEntryFromAttributes(this._searchBase, searchResultMessage.Entry.getAttributeSet()));
+                }
+            }
+
+            return null;
+        }
         //public LdapUser GetAdministrator()
         //{
         //    var name = this._ldapSettings.Credentials.DomainUserName.Substring(
@@ -406,18 +466,18 @@ namespace NetApp.Security
             var dn = $"CN={user.FullName},{container ?? _ldapSettings.DomainDistinguishedName}";
 
             var attributeSet = new LdapAttributeSet
- {
- new LdapAttribute("instanceType", "4"),
- new LdapAttribute("objectCategory", $"CN=Person,CN=Schema,CN=Configuration,{this._ldapSettings.DomainDistinguishedName}"),
- new LdapAttribute("objectClass", new[] {"top", "person", "organizationalPerson", "user"}),
- new LdapAttribute("name", user.FullName),
- new LdapAttribute("cn", $"{user.FullName}"),
- new LdapAttribute("sAMAccountName", user.UserName?.Trim().ToLower()),
- new LdapAttribute("userPrincipalName", $"{user.UserName.Trim().ToLower()}@{this._ldapSettings.DomainName?.Trim()}"),
- new LdapAttribute("unicodePwd", SupportClass.ToSByteArray(Encoding.Unicode.GetBytes($"\"{user.Password?.Trim()}\""))),
- new LdapAttribute("userAccountControl", user.MustChangePasswordOnNextLogon ? "544" : "512"),
- new LdapAttribute("givenName", user.FirstName?.Trim()),
- new LdapAttribute("sn", user.LastName?.Trim()),
+{
+new LdapAttribute("instanceType", "4"),
+new LdapAttribute("objectCategory", $"CN=Person,CN=Schema,CN=Configuration,{this._ldapSettings.DomainDistinguishedName}"),
+new LdapAttribute("objectClass", new[] {"top", "person", "organizationalPerson", "user"}),
+new LdapAttribute("name", user.FullName),
+new LdapAttribute("cn", $"{user.FullName}"),
+new LdapAttribute("sAMAccountName", user.UserName?.Trim().ToLower()),
+new LdapAttribute("userPrincipalName", $"{user.UserName.Trim().ToLower()}@{this._ldapSettings.DomainName?.Trim()}"),
+new LdapAttribute("unicodePwd", SupportClass.ToSByteArray(Encoding.Unicode.GetBytes($"\"{user.Password?.Trim()}\""))),
+new LdapAttribute("userAccountControl", user.MustChangePasswordOnNextLogon ? "544" : "512"),
+new LdapAttribute("givenName", user.FirstName?.Trim()),
+new LdapAttribute("sn", user.LastName?.Trim()),
          //new LdapAttribute("mail", user.EmailAddress)
         };
             if (!string.IsNullOrWhiteSpace(user.EmailAddress))
@@ -792,7 +852,7 @@ namespace NetApp.Security
             return new LdapEntry
             {
                 ObjectSid = attributeSet.getAttribute("objectSid")?.StringValue,
-                ObjectGuid = attributeSet.getAttribute("objectGUID")?.StringValue,
+                ObjectGuid = ConvertToString(attributeSet.getAttribute("objectGUID")?.ByteValue),
                 ObjectCategory = attributeSet.getAttribute("objectCategory")?.StringValue,
                 ObjectClass = attributeSet.getAttribute("objectClass")?.StringValue,
                 CommonName = attributeSet.getAttribute("cn")?.StringValue,
@@ -803,14 +863,14 @@ namespace NetApp.Security
             };
         }
 
-        //private SecurityIdentifier GetDomainSid()
-        //{
-        //    var administratorAcount = new NTAccount(this._ldapSettings.DomainName, "administrator");
-        //    var administratorSId = (SecurityIdentifier)administratorAcount.Translate(typeof(SecurityIdentifier));
-        //    return administratorSId.AccountDomainSid;
-        //}
+        //private SecurityIdentifier GetDomainSid()
+        //{
+        //    var administratorAcount = new NTAccount(this._ldapSettings.DomainName, "administrator");
+        //    var administratorSId = (SecurityIdentifier)administratorAcount.Translate(typeof(SecurityIdentifier));
+        //    return administratorSId.AccountDomainSid;
+        //}
 
-        private IEnumerable<string> GetGroupsForUser(string username)
+        private IEnumerable<string> GetGroupsForUser(string username)
         {
             //var items = _cache?.Get<Dictionary<string, HashSet<string>>>(CacheKeyADGroups);
             //var item = items?[userName];
@@ -1319,6 +1379,19 @@ namespace NetApp.Security
                 return null;
             byte[] byteData = Array.ConvertAll(sbyteData, (a) => (byte)a);
             return new Guid(byteData).ToString();
+        }
+        private string ConvertGuidToOctetString(string objectGuid)
+        {
+            if (string.IsNullOrWhiteSpace(objectGuid))
+                return null;
+            var result = new StringBuilder();
+            Guid guid = new Guid(objectGuid);
+            byte[] byteGuid = guid.ToByteArray();
+            foreach (byte b in byteGuid)
+            {
+                result.Append(@"\" + b.ToString("x2"));
+            }
+            return result.ToString();
         }
         //private UserPrincipal GetUserPrincipal(string username)
         //{
