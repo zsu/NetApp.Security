@@ -22,6 +22,8 @@ namespace NetApp.Security
         LdapUser GetUserByLogonName(string username);
         List<LdapUser> GetUser(string firstname, string lastname);
         List<LdapUser> GetSubordinates(string managerUsername);
+        LdapUser GetUserByGuid(string guid, string container = null);
+        LdapEntry GetByGuid(string guid, string container = null);
         void AddUser(LdapUser user, string password);
         void Delete(string name, LdapPrincipalType type = LdapPrincipalType.User);
         //void DeleteUser(string distinguishedName);
