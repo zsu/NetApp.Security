@@ -27,7 +27,7 @@ namespace NetApp.Security.Windows
             var user = GetUserByLogonName(username);
             if (user == null)
                 throw new Exception($"User {username} not found.");
-            byte[] bytes = null;
+            byte[] bytes;
             using (var ms = new MemoryStream())
             {
                 stream.CopyTo(ms);
@@ -65,7 +65,7 @@ namespace NetApp.Security.Windows
             //    }
             //}
         }
-        protected override ICollection<T> GetChildren<T>(string searchBase, string groupDistinguishedName = null, bool recursive = true)
+        protected override ICollection<T> GetChildren<T>(string searchBase, string? groupDistinguishedName = null, bool recursive = true)
         {
             var entries = new Collection<T>();
 
@@ -95,14 +95,14 @@ namespace NetApp.Security.Windows
             return entries;
         }
 
-        protected override ICollection<ILdapEntry> GetChildren(string searchBase, string groupDistinguishedName = null,
+        protected override ICollection<ILdapEntry> GetChildren(string searchBase, string? groupDistinguishedName = null,
         string objectCategory = "*", string objectClass = "*", bool recursive = true)
         {
             var allChildren = new HashSet<ILdapEntry>();
 
             var filter = string.IsNullOrEmpty(groupDistinguishedName)
             ? $"(&(objectCategory={objectCategory})(objectClass={objectClass}))"
-            : (recursive ? $"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf:1.2.840.113556.1.4.1941:={Microsoft.Security.Application.Encoder.LdapEncode(groupDistinguishedName)}))" : $"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf={Microsoft.Security.Application.Encoder.LdapEncode(groupDistinguishedName)}))");
+            : (recursive ? $"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf:1.2.840.113556.1.4.1941:={Microsoft.Security.Application.Encoder.LdapFilterEncode(groupDistinguishedName)}))" : $"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf={Microsoft.Security.Application.Encoder.LdapFilterEncode(groupDistinguishedName)}))");
 
             using (var ldapConnection = this.GetConnection())
             {
@@ -147,7 +147,7 @@ namespace NetApp.Security.Windows
 
             return allChildren;
         }
-        protected override ICollection<T> GetParent<T>(string searchBase, string groupDistinguishedName = null, bool recursive = true)
+        protected override ICollection<T> GetParent<T>(string searchBase, string? groupDistinguishedName = null, bool recursive = true)
         {
             var entries = new Collection<T>();
 
@@ -177,14 +177,14 @@ namespace NetApp.Security.Windows
             return entries;
         }
 
-        protected override ICollection<ILdapEntry> GetParent(string searchBase, string groupDistinguishedName = null,
+        protected override ICollection<ILdapEntry> GetParent(string searchBase, string? groupDistinguishedName = null,
         string objectCategory = "*", string objectClass = "*", bool recursive = true)
         {
             var allChildren = new HashSet<ILdapEntry>();
 
             var filter = string.IsNullOrEmpty(groupDistinguishedName)
             ? $"(&(objectCategory={objectCategory})(objectClass={objectClass}))"
-            : (recursive ? $"(&(objectCategory={objectCategory})(objectClass={objectClass})(member:1.2.840.113556.1.4.1941:={Microsoft.Security.Application.Encoder.LdapEncode(groupDistinguishedName)}))" : $"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={Microsoft.Security.Application.Encoder.LdapEncode(groupDistinguishedName)}))");
+            : (recursive ? $"(&(objectCategory={objectCategory})(objectClass={objectClass})(member:1.2.840.113556.1.4.1941:={Microsoft.Security.Application.Encoder.LdapFilterEncode(groupDistinguishedName)}))" : $"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={Microsoft.Security.Application.Encoder.LdapFilterEncode(groupDistinguishedName)}))");
 
             using (var ldapConnection = this.GetConnection())
             {
