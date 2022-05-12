@@ -610,7 +610,7 @@ new LdapAttribute("sn", user.LastName?.Trim()),
             if (manager == null)
                 throw new Exception($"{managerUsername} cannot be found.");
 
-            var filter = $"(&(objectClass=user)(manager={Microsoft.Security.Application.Encoder.LdapEncode(manager.DistinguishedName)}))";
+            var filter = $"(&(objectClass=user)(manager={Microsoft.Security.Application.Encoder.LdapFilterEncode(manager.DistinguishedName)}))";
 
             using (var ldapConnection = this.GetConnection())
             {
@@ -676,7 +676,7 @@ new LdapAttribute("sn", user.LastName?.Trim()),
             var allChildren = new Collection<ILdapEntry>();
             var filter = string.IsNullOrEmpty(groupDistinguishedName)
             ? $"(&(objectCategory={objectCategory})(objectClass={objectClass}))"
-            : ($"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf={Microsoft.Security.Application.Encoder.LdapEncode(groupDistinguishedName)}))");
+            : ($"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf={Microsoft.Security.Application.Encoder.LdapFilterEncode(groupDistinguishedName)}))");
 
             using (var ldapConnection = this.GetConnection())
             {
@@ -758,7 +758,7 @@ new LdapAttribute("sn", user.LastName?.Trim()),
 
             var filter = string.IsNullOrEmpty(groupDistinguishedName)
             ? $"(&(objectCategory={objectCategory})(objectClass={objectClass}))"
-            : ($"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={Microsoft.Security.Application.Encoder.LdapEncode(groupDistinguishedName)}))");
+            : ($"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={Microsoft.Security.Application.Encoder.LdapFilterEncode(groupDistinguishedName)}))");
             using (var ldapConnection = this.GetConnection())
             {
                 var search = ldapConnection.Search(
