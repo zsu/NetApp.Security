@@ -10,6 +10,7 @@ using NetApp.Security.Extensions;
 //using System.DirectoryServices.AccountManagement;
 using NetApp.Common;
 using System.Text.RegularExpressions;
+using Org.BouncyCastle.Asn1.Cms;
 //using System.DirectoryServices;
 
 namespace NetApp.Security
@@ -310,6 +311,35 @@ namespace NetApp.Security
                 }
             }
 
+            return null;
+        }
+        public virtual string GetUserAttribute(string username,string attribute, string container = null)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+                return null;
+            var filter = $"(&(objectClass=user)(sAMAccountName={username?.Trim()}))";
+            using (var ldapConnection = this.GetConnection())
+            {
+                var search = ldapConnection.Search(
+                this._searchBase,
+                LdapConnection.SCOPE_SUB,
+                filter,
+                new string[] {attribute},
+                false,
+                null,
+                null);
+
+                LdapMessage message;
+
+                while ((message = search.getResponse()) != null)
+                {
+                    if (!(message is LdapSearchResult searchResultMessage))
+                    {
+                        continue;
+                    }
+                    return searchResultMessage.Entry.getAttributeSet().getAttribute(attribute)?.StringValue;
+                }
+            }
             return null;
         }
         //public LdapUser GetAdministrator()
