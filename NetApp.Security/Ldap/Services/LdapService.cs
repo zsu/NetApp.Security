@@ -124,7 +124,7 @@ namespace NetApp.Security
                 }
             }
 
-            return users.DistinctBy(x => x.Name).ToList();
+            return users.DistinctBy(x => x.SamAccountName).ToList();
         }
 
         public ICollection<LdapUser> GetUsersByEmailAddress(string emailAddress)
