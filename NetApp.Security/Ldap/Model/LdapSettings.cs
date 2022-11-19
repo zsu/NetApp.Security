@@ -22,7 +22,7 @@
         public string DomainName { get; set; }
 
         public string DomainDistinguishedName { get; set; }
-
+        public int PageSize { get; set; } = 1000;
         public LdapCredentials Credentials { get; set; }
     }
 }

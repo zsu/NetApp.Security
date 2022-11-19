@@ -33,7 +33,7 @@ namespace NetApp.Security.Windows
                 stream.CopyTo(ms);
                 bytes = ms.ToArray();
             }
-            var changes = new LdapModification(LdapModification.REPLACE, new LdapAttribute("jpegPhoto", SupportClass.ToSByteArray(bytes)));
+            var changes = new LdapModification(LdapModification.Replace, new LdapAttribute("jpegPhoto", bytes));
             using (var ldapConnection = this.GetConnection())
             {
                 ldapConnection.Modify(user.DistinguishedName, changes);
@@ -49,7 +49,7 @@ namespace NetApp.Security.Windows
                     bytes = ms.ToArray();
                 }
             }
-            changes = new LdapModification(LdapModification.REPLACE, new LdapAttribute("thumbnailPhoto", SupportClass.ToSByteArray(bytes)));
+            changes = new LdapModification(LdapModification.Replace, new LdapAttribute("thumbnailPhoto", bytes));
             using (var ldapConnection = this.GetConnection())
             {
                 ldapConnection.Modify(user.DistinguishedName, changes);
@@ -106,41 +106,72 @@ namespace NetApp.Security.Windows
 
             using (var ldapConnection = this.GetConnection())
             {
-                var search = ldapConnection.Search(
-                searchBase ??= this._searchBase,
-                LdapConnection.SCOPE_SUB,
+                //var search = ldapConnection.Search(
+                //searchBase ??= this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes,
+                //false,
+                //null,
+                //null);
+
+                //LdapMessage message;
+
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
+
+                //    var entry = searchResultMessage.Entry;
+
+                //    if (objectClass == "group")
+                //    {
+                //        allChildren.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //        //if (recursive)
+                //        //{
+                //        //    foreach (var child in this.GetChildren(string.Empty, entry.Dn, objectCategory, objectClass, recursive))
+                //        //    {
+                //        //        allChildren.Add(child);
+                //        //    }
+                //        //}
+                //    }
+
+                //    if (objectClass == "user")
+                //    {
+                //        allChildren.Add(this.CreateUserFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //    }
+                //}
+                var searchOptions = new SearchOptions(
+                this._searchBase,
+                LdapConnection.ScopeSub,
                 filter,
-                this._attributes,
-                false,
-                null,
-                null);
-
-                LdapMessage message;
-
-                while ((message = search.getResponse()) != null)
+                this._attributes);
+                var data = ldapConnection.SearchUsingSimplePaging(
+                        searchOptions,
+                        _ldapSettings.PageSize
+                    );
+                if (data?.Count > 0)
                 {
-                    if (!(message is LdapSearchResult searchResultMessage))
+                    foreach (var entry in data)
                     {
-                        continue;
-                    }
+                        if (objectClass == "group")
+                        {
+                            allChildren.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                            if (recursive)
+                            {
+                                foreach (var child in this.GetChildren(searchBase, entry.Dn, objectCategory, objectClass, recursive))
+                                {
+                                    allChildren.Add(child);
+                                }
+                            }
+                        }
 
-                    var entry = searchResultMessage.Entry;
-
-                    if (objectClass == "group")
-                    {
-                        allChildren.Add(this.CreateEntryFromAttributes(entry.DN, entry.getAttributeSet()));
-                        //if (recursive)
-                        //{
-                        //    foreach (var child in this.GetChildren(string.Empty, entry.DN, objectCategory, objectClass, recursive))
-                        //    {
-                        //        allChildren.Add(child);
-                        //    }
-                        //}
-                    }
-
-                    if (objectClass == "user")
-                    {
-                        allChildren.Add(this.CreateUserFromAttributes(entry.DN, entry.getAttributeSet()));
+                        if (objectClass == "user")
+                        {
+                            allChildren.Add(this.CreateUserFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                        }
                     }
                 }
             }
@@ -188,41 +219,72 @@ namespace NetApp.Security.Windows
 
             using (var ldapConnection = this.GetConnection())
             {
-                var search = ldapConnection.Search(
-                searchBase ??= this._searchBase,
-                LdapConnection.SCOPE_SUB,
+                //var search = ldapConnection.Search(
+                //searchBase ??= this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes,
+                //false,
+                //null,
+                //null);
+
+                //LdapMessage message;
+
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
+
+                //    var entry = searchResultMessage.Entry;
+
+                //    if (objectClass == "group")
+                //    {
+                //        allChildren.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //        //if (recursive)
+                //        //{
+                //        //    foreach (var child in this.GetParent(string.Empty, entry.Dn, objectCategory, objectClass, recursive))
+                //        //    {
+                //        //        allChildren.Add(child);
+                //        //    }
+                //        //}
+                //    }
+
+                //    if (objectClass == "user")
+                //    {
+                //        allChildren.Add(this.CreateUserFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //    }
+                //}
+                var searchOptions = new SearchOptions(
+                this._searchBase,
+                LdapConnection.ScopeSub,
                 filter,
-                this._attributes,
-                false,
-                null,
-                null);
-
-                LdapMessage message;
-
-                while ((message = search.getResponse()) != null)
+                this._attributes);
+                var data = ldapConnection.SearchUsingSimplePaging(
+                        searchOptions,
+                        _ldapSettings.PageSize
+                    );
+                if (data?.Count > 0)
                 {
-                    if (!(message is LdapSearchResult searchResultMessage))
+                    foreach (var entry in data)
                     {
-                        continue;
-                    }
+                        if (objectClass == "group")
+                        {
+                            allChildren.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                            if (recursive)
+                            {
+                                foreach (var child in this.GetParent(searchBase, entry.Dn, objectCategory, objectClass, recursive))
+                                {
+                                    allChildren.Add(child);
+                                }
+                            }
+                        }
 
-                    var entry = searchResultMessage.Entry;
-
-                    if (objectClass == "group")
-                    {
-                        allChildren.Add(this.CreateEntryFromAttributes(entry.DN, entry.getAttributeSet()));
-                        //if (recursive)
-                        //{
-                        //    foreach (var child in this.GetParent(string.Empty, entry.DN, objectCategory, objectClass, recursive))
-                        //    {
-                        //        allChildren.Add(child);
-                        //    }
-                        //}
-                    }
-
-                    if (objectClass == "user")
-                    {
-                        allChildren.Add(this.CreateUserFromAttributes(entry.DN, entry.getAttributeSet()));
+                        if (objectClass == "user")
+                        {
+                            allChildren.Add(this.CreateUserFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                        }
                     }
                 }
             }
