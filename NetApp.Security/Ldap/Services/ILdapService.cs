@@ -18,7 +18,7 @@ namespace NetApp.Security
 
         //LdapUser GetAdministrator();
 
-        LdapUser GetUserByName(string name);
+        ICollection<LdapUser> GetUserByName(string name);
         LdapUser GetUserByLogonName(string username);
         List<LdapUser> GetUser(string firstname, string lastname);
         List<LdapUser> GetSubordinates(string managerUsername);
