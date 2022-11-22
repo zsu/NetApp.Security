@@ -458,7 +458,7 @@ namespace NetApp.Security
                   );
                 if (data?.Count > 0)
                 {
-                    return data.Select(x => x.GetAttributeSet().GetAttribute(attribute)?.StringValue).FirstOrDefault();
+                    return data.Select(x => x.GetAttributeSet().ContainsKey(attribute)? x.GetAttributeSet().GetAttribute(attribute)?.StringValue:null).FirstOrDefault();
                 }
             }
             return null;
