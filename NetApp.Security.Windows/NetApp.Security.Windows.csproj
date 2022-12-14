@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Authors>Zhicheng Su</Authors>
-    <Version>3.2.0</Version>
+    <Version>3.3.0</Version>
     <Description>Ldap library for .Net</Description>
     <Copyright>Zhicheng Su</Copyright>
     <PackageTags>Security, Ldap, Active Directory, .Net</PackageTags>
@@ -14,9 +14,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NetApp.Security" Version="5.2.0" />
     <PackageReference Include="Novell.Directory.Ldap.NETStandard" Version="3.6.0" />
     <PackageReference Include="System.Drawing.Common" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetApp.Security\NetApp.Security.csproj" />
   </ItemGroup>
 
 </Project>
