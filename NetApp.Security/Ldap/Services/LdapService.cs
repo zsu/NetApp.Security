@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Options;
-using Novell.Directory.Ldap;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -7,11 +6,11 @@ using System.Linq;
 using System.Security.Principal;
 using System.Text;
 using NetApp.Security.Extensions;
-//using System.DirectoryServices.AccountManagement;
 using NetApp.Common;
 using System.Text.RegularExpressions;
+using System.DirectoryServices.Protocols;
 using Org.BouncyCastle.Asn1.Cms;
-//using System.DirectoryServices;
+using Org.BouncyCastle.Utilities;
 
 namespace NetApp.Security
 {
@@ -25,11 +24,13 @@ namespace NetApp.Security
 
         protected readonly string[] _attributes =
         {
-"objectSid", "objectGUID", "objectCategory", "objectClass", "memberOf", "name", "cn", "distinguishedName",
-"sAMAccountName", "userPrincipalName", "displayName", "givenName", "sn", "description",
-"telephoneNumber", "mail", "streetAddress", "postalCode", "l", "st", "co", "c",
-"department","division","manager","title","userAccountControl","employeeID","initials"
-};
+            LdapAttributes.ObjectSid,LdapAttributes.ObjectGuid,LdapAttributes.ObjectCategory,LdapAttributes.ObjectClass,LdapAttributes.MemberOf,
+            LdapAttributes.Name,LdapAttributes.Cn,LdapAttributes.DistinguishedName,LdapAttributes.SAmAccountName,LdapAttributes.UserPrincipalName,
+            LdapAttributes.DisplayName,LdapAttributes.GivenName,LdapAttributes.Sn,LdapAttributes.Description,LdapAttributes.TelephoneNumber,
+            LdapAttributes.Mail,LdapAttributes.StreetAddress,LdapAttributes.PostalCode,LdapAttributes.City,LdapAttributes.State,LdapAttributes.Country,
+            LdapAttributes.CountryCode,LdapAttributes.Department,LdapAttributes.Division,LdapAttributes.Manager,LdapAttributes.Title,LdapAttributes.UserAccountControl,
+            LdapAttributes.EmployeeId,LdapAttributes.Initials
+        };
         public LdapService(IOptions<LdapSettings> options)
         {
             this._ldapSettings = options.Value;
@@ -41,16 +42,36 @@ namespace NetApp.Security
             this._searchBase = this._ldapSettings.SearchBase;
             _encryptionService = encryptionService;
         }
-
-        protected ILdapConnection GetConnection()
+        public LdapService(LdapSettings settings)
         {
-            var ldapConnection = new LdapConnection() { SecureSocketLayer = this._ldapSettings.UseSSL };
+            this._ldapSettings = settings;
+            this._searchBase = this._ldapSettings.SearchBase;
+        }
+        public LdapService(LdapSettings ldapSettings, IEncryptionService encryptionService)
+        {
+            this._ldapSettings = ldapSettings;
+            this._searchBase = this._ldapSettings.SearchBase;
+            _encryptionService = encryptionService;
+        }
+        protected LdapConnection GetConnection()
+        {
+            //var ldapConnection = new LdapConnection() { SecureSocketLayer = this._ldapSettings.UseSSL };
+            //var constrains = ldapConnection.Constraints;
+            //constrains.ReferralFollowing = _ldapSettings.ReferralFollowing;
+            //ldapConnection.Constraints = constrains;
+            //ldapConnection.SearchConstraints.ReferralFollowing= _ldapSettings.ReferralFollowing;
+            ////Connect function will create a socket connection to the server - Port 389 for insecure and 3269 for secure    
+            //ldapConnection.Connect(this._ldapSettings.ServerName, this._ldapSettings.ServerPort);
+            ////Bind function with null user dn and password value will perform anonymous bind to LDAP server 
+            //ldapConnection.Bind(this._ldapSettings.Credentials.DomainUserName, _encryptionService != null ? _encryptionService.Decrypt(this._ldapSettings.Credentials.Password) : this._ldapSettings.Credentials.Password);
 
-            //Connect function will create a socket connection to the server - Port 389 for insecure and 3269 for secure    
-            ldapConnection.Connect(this._ldapSettings.ServerName, this._ldapSettings.ServerPort);
-            //Bind function with null user dn and password value will perform anonymous bind to LDAP server 
-            ldapConnection.Bind(this._ldapSettings.Credentials.DomainUserName, _encryptionService != null ? _encryptionService.Decrypt(this._ldapSettings.Credentials.Password) : this._ldapSettings.Credentials.Password);
-
+            //return ldapConnection;
+            var identifier = new LdapDirectoryIdentifier(_ldapSettings.ServerName, _ldapSettings.ServerPort);
+            var ldapConnection = new LdapConnection(identifier);// { SecureSocketLayer = this._ldapSettings.UseSSL };
+            if (!_ldapSettings.ReferralFollowing)
+                ldapConnection.SessionOptions.ReferralChasing = ReferralChasingOptions.None;
+            ldapConnection.SessionOptions.SecureSocketLayer = _ldapSettings.UseSSL;
+            ldapConnection.Bind(new System.Net.NetworkCredential(this._ldapSettings.Credentials.DomainUserName, _encryptionService != null ? _encryptionService.Decrypt(this._ldapSettings.Credentials.Password) : this._ldapSettings.Credentials.Password));
             return ldapConnection;
         }
 
@@ -61,46 +82,93 @@ namespace NetApp.Security
 
             using (var ldapConnection = this.GetConnection())
             {
-                var search = ldapConnection.Search(
-                this._searchBase,
-                LdapConnection.SCOPE_SUB,
-                filter,
-                this._attributes,
-                false,
-                null,
-                null);
+                //var search = ldapConnection.Search(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes,
+                //false,
+                //null);
 
-                LdapMessage message;
+                //LdapMessage message;
 
-                while ((message = search.getResponse()) != null)
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
+
+                //    var entry = searchResultMessage.Entry;
+
+                //    groups.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
+
+                //    if (!getChildGroups)
+                //    {
+                //        continue;
+                //    }
+
+                //    foreach (var child in this.GetChildren<LdapEntry>(string.Empty, entry.Dn))
+                //    {
+                //        groups.Add(child);
+                //    }
+                //}
+
+                //        var searchOptions = new SearchOptions(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes);
+                //        var data = ldapConnection.SearchUsingSimplePaging(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            foreach (var entry in data)
+                //            {
+                //                groups.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //                if (!getChildGroups)
+                //                {
+                //                    continue;
+                //                }
+
+                //                foreach (var child in this.GetChildren<LdapEntry>(string.Empty, entry.Dn))
+                //                {
+                //                    groups.Add(child);
+                //                }
+                //            }
+                //        }
+                //    }
+
+                //    return groups.DistinctBy(x => x.Name).ToList();
+                var req = new SearchRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
+                var resp = (SearchResponse)ldapConnection.SendRequest(req);
+                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
                 {
-                    if (!(message is LdapSearchResult searchResultMessage))
+
+                    foreach (SearchResultEntry entry in resp.Entries)
                     {
-                        continue;
-                    }
+                        groups.Add(this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes));
 
-                    var entry = searchResultMessage.Entry;
+                        if (!getChildGroups)
+                        {
+                            continue;
+                        }
 
-                    groups.Add(this.CreateEntryFromAttributes(entry.DN, entry.getAttributeSet()));
-
-                    if (!getChildGroups)
-                    {
-                        continue;
-                    }
-
-                    foreach (var child in this.GetChildren<LdapEntry>(string.Empty, entry.DN))
-                    {
-                        groups.Add(child);
+                        foreach (var child in this.GetChildren<LdapEntry>(string.Empty, entry.DistinguishedName))
+                        {
+                            groups.Add(child);
+                        }
                     }
                 }
             }
-
             return groups.DistinctBy(x => x.Name).ToList();
         }
 
-        public ICollection<LdapUser> GetAllUsers()
+        public ICollection<LdapUser> GetAllUsers(string container = null)
         {
-            return this.GetUsersInGroups(null, null);
+            return this.GetUsersInGroups(null, container);
         }
 
         public ICollection<LdapUser> GetUsersInGroup(string group, string container = null)
@@ -114,13 +182,13 @@ namespace NetApp.Security
 
             if (groups == null || !groups.Any())
             {
-                users.AddRange(this.GetChildren<LdapUser>(container ?? this._searchBase));
+                users.AddRange(this.GetChildren<LdapUser>(string.IsNullOrWhiteSpace(container) ? this._searchBase : container));
             }
             else
             {
                 foreach (var group in groups)
                 {
-                    users.AddRange(this.GetChildren<LdapUser>(container ?? this._searchBase, @group.DistinguishedName));
+                    users.AddRange(this.GetChildren<LdapUser>(string.IsNullOrWhiteSpace(container) ? this._searchBase : container, @group.DistinguishedName));
                 }
             }
 
@@ -134,60 +202,108 @@ namespace NetApp.Security
 
             using (var ldapConnection = this.GetConnection())
             {
-                var search = ldapConnection.Search(
-                this._searchBase,
-                LdapConnection.SCOPE_SUB,
-                filter,
-                this._attributes,
-                false, null, null);
+                //var search = ldapConnection.Search(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes,
+                //false, null);
 
-                LdapMessage message;
+                //LdapMessage message;
 
-                while ((message = search.getResponse()) != null)
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
+
+                //    users.Add(this.CreateUserFromAttributes(this._searchBase,
+                //    searchResultMessage.Entry.GetAttributeSet()));
+                //}
+
+                //        var searchOptions = new SearchOptions(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes);
+                //        var data = ldapConnection.SearchUsingSimplePaging(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            users.AddRange(data.Select(x => this.CreateUserFromAttributes(x.Dn, x.GetAttributeSet())));
+                //        }
+                //    }
+
+                //    return users;
+                var req = new SearchRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
+                var resp = (SearchResponse)ldapConnection.SendRequest(req);
+                while (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
                 {
-                    if (!(message is LdapSearchResult searchResultMessage))
+                    foreach (SearchResultEntry entry in resp.Entries)
                     {
-                        continue;
+                        users.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
                     }
-
-                    users.Add(this.CreateUserFromAttributes(this._searchBase,
-                    searchResultMessage.Entry.getAttributeSet()));
                 }
             }
-
             return users;
         }
 
-        public LdapUser GetUserByName(string name)
+        public ICollection<LdapUser> GetUserByName(string name)
         {
-            LdapUser user = null;
+            var users = new Collection<LdapUser>();
 
             var filter = $"(&(objectClass=user)(name={LdapEncoder.FilterEncode(name)}))";
             using (var ldapConnection = this.GetConnection())
             {
-                var search = ldapConnection.Search(
-                this._searchBase,
-                LdapConnection.SCOPE_SUB,
-                filter,
-                this._attributes,
-                false,
-                null,
-                null);
+                //var search = ldapConnection.Search(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes,
+                //false,
+                //null,
+                //null);
 
-                LdapMessage message;
+                //LdapMessage message;
 
-                while ((message = search.getResponse()) != null)
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
+
+                //    user = this.CreateUserFromAttributes(this._searchBase, searchResultMessage.Entry.GetAttributeSet());
+                //}
+
+                //        var searchOptions = new SearchOptions(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes);
+                //        var data = ldapConnection.SearchUsingSimplePaging(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            users.AddRange(data.Select(x => this.CreateUserFromAttributes(x.Dn, x.GetAttributeSet())));
+                //        }
+                //    }
+                var req = new SearchRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
+                var resp = (SearchResponse)ldapConnection.SendRequest(req);
+                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
                 {
-                    if (!(message is LdapSearchResult searchResultMessage))
+                    foreach (SearchResultEntry entry in resp.Entries)
                     {
-                        continue;
+                        users.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
                     }
-
-                    user = this.CreateUserFromAttributes(this._searchBase, searchResultMessage.Entry.getAttributeSet());
                 }
             }
-
-            return user;
+            return users;
         }
         public LdapUser GetUserByLogonName(string username)
         {
@@ -197,28 +313,56 @@ namespace NetApp.Security
 
             using (var ldapConnection = this.GetConnection())
             {
-                var search = ldapConnection.Search(
-                this._searchBase,
-                LdapConnection.SCOPE_SUB,
-                filter,
-                this._attributes,
-                false,
-                null,
-                null);
+                //var search = ldapConnection.Search(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes,
+                //false,
+                //null,
+                //null);
 
-                LdapMessage message;
+                //LdapMessage message;
 
-                while ((message = search.getResponse()) != null)
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
+
+                //    user = this.CreateUserFromAttributes(this._searchBase, searchResultMessage.Entry.GetAttributeSet());
+                //}
+
+                //        var searchOptions = new SearchOptions(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes);
+                //        //var data = ldapConnection.SearchUsingSimplePaging(
+                //        //    searchOptions,
+                //        //    _ldapSettings.PageSize
+                //        //  );
+                //        var data = ldapConnection.SearchUsingVlvAsync(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            user = data.Select(x => this.CreateUserFromAttributes(x.Dn, x.GetAttributeSet())).FirstOrDefault();
+                //        }
+                //    }
+                var req = new SearchRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
+                var resp = (SearchResponse)ldapConnection.SendRequest(req);
+                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
                 {
-                    if (!(message is LdapSearchResult searchResultMessage))
+                    foreach (SearchResultEntry entry in resp.Entries)
                     {
-                        continue;
+                        user = this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes);
+                        break;
                     }
-
-                    user = this.CreateUserFromAttributes(this._searchBase, searchResultMessage.Entry.getAttributeSet());
                 }
             }
-
             return user;
         }
         public List<LdapUser> GetUser(string firstname, string lastname)
@@ -229,115 +373,216 @@ namespace NetApp.Security
 
             using (var ldapConnection = this.GetConnection())
             {
-                var search = ldapConnection.Search(
-                this._searchBase,
-                LdapConnection.SCOPE_SUB,
-                filter,
-                this._attributes,
-                false,
-                null,
-                null);
+                //var search = ldapConnection.Search(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes,
+                //false,
+                //null,
+                //null);
 
-                LdapMessage message;
+                //LdapMessage message;
 
-                while ((message = search.getResponse()) != null)
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
+
+                //    user.Add(this.CreateUserFromAttributes(this._searchBase, searchResultMessage.Entry.GetAttributeSet()));
+                //}
+
+                //        var searchOptions = new SearchOptions(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes);
+                //        var data = ldapConnection.SearchUsingSimplePaging(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            user.AddRange(data.Select(x => this.CreateUserFromAttributes(x.Dn, x.GetAttributeSet())));
+                //        }
+                //    }
+                var req = new SearchRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
+                var resp = (SearchResponse)ldapConnection.SendRequest(req);
+                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
                 {
-                    if (!(message is LdapSearchResult searchResultMessage))
-                    {
-                        continue;
-                    }
 
-                    user.Add(this.CreateUserFromAttributes(this._searchBase, searchResultMessage.Entry.getAttributeSet()));
+                    foreach (SearchResultEntry entry in resp.Entries)
+                    {
+                        user.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
+                    }
                 }
             }
-
             return user;
         }
         public virtual LdapUser GetUserByGuid(string guid, string container = null)
         {
+            LdapUser user = null;
             var filter = $"(&(objectClass=user)(objectGUID={ConvertGuidToOctetString(guid)}))";
 
             using (var ldapConnection = this.GetConnection())
             {
-                var search = ldapConnection.Search(
-                container ?? this._searchBase,
-                LdapConnection.SCOPE_SUB,
-                filter,
-                this._attributes,
-                false,
-                null,
-                null);
+                //var search = ldapConnection.Search(
+                //container ?? this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes,
+                //false,
+                //null,
+                //null);
 
-                LdapMessage message;
+                //LdapMessage message;
 
-                while ((message = search.getResponse()) != null)
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
+
+                //    return (this.CreateUserFromAttributes(this._searchBase, searchResultMessage.Entry.GetAttributeSet()));
+                //}
+
+                //        var searchOptions = new SearchOptions(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes);
+                //        var data = ldapConnection.SearchUsingSimplePaging(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            user = data.Select(x => this.CreateUserFromAttributes(x.Dn, x.GetAttributeSet())).FirstOrDefault();
+                //        }
+                //    }
+                var req = new SearchRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
+                var resp = (SearchResponse)ldapConnection.SendRequest(req);
+                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
                 {
-                    if (!(message is LdapSearchResult searchResultMessage))
-                    {
-                        continue;
-                    }
 
-                    return (this.CreateUserFromAttributes(this._searchBase, searchResultMessage.Entry.getAttributeSet()));
+                    foreach (SearchResultEntry entry in resp.Entries)
+                    {
+                        user = this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes);
+                        break;
+                    }
                 }
             }
-
-            return null;
+            return user;
         }
         public virtual LdapEntry GetByGuid(string guid, string container = null)
         {
+            LdapEntry result = null;
             var filter = $"(&(objectClass=*)(objectGUID={ConvertGuidToOctetString(guid)}))";
 
             using (var ldapConnection = this.GetConnection())
             {
-                var search = ldapConnection.Search(
-                container ?? this._searchBase,
-                LdapConnection.SCOPE_SUB,
-                filter,
-                this._attributes,
-                false,
-                null,
-                null);
+                //var search = ldapConnection.Search(
+                //container ?? this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes,
+                //false,
+                //null,
+                //null);
 
-                LdapMessage message;
+                //LdapMessage message;
 
-                while ((message = search.getResponse()) != null)
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
+
+                //    return (this.CreateEntryFromAttributes(this._searchBase, searchResultMessage.Entry.GetAttributeSet()));
+                //}
+
+                //        var searchOptions = new SearchOptions(
+                //string.IsNullOrWhiteSpace(container) ? this._searchBase : container,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes);
+                //        var data = ldapConnection.SearchUsingSimplePaging(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            result = data.Select(x => this.CreateEntryFromAttributes(x.Dn, x.GetAttributeSet())).FirstOrDefault();
+                //        }
+                //    }
+                var req = new SearchRequest(string.IsNullOrWhiteSpace(container) ? this._searchBase : container, filter, SearchScope.Subtree, _attributes);
+                var resp = (SearchResponse)ldapConnection.SendRequest(req);
+                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
                 {
-                    if (!(message is LdapSearchResult searchResultMessage))
-                    {
-                        continue;
-                    }
 
-                    return (this.CreateEntryFromAttributes(this._searchBase, searchResultMessage.Entry.getAttributeSet()));
+                    foreach (SearchResultEntry entry in resp.Entries)
+                    {
+                        result = this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes);
+                        break;
+                    }
                 }
             }
-
-            return null;
+            return result;
         }
-        public virtual string GetUserAttribute(string username,string attribute, string container = null)
+        public virtual string GetUserAttribute(string username, string attribute, string container = null)
         {
             if (string.IsNullOrWhiteSpace(username))
                 return null;
             var filter = $"(&(objectClass=user)(sAMAccountName={username?.Trim()}))";
             using (var ldapConnection = this.GetConnection())
             {
-                var search = ldapConnection.Search(
-                this._searchBase,
-                LdapConnection.SCOPE_SUB,
-                filter,
-                new string[] {attribute},
-                false,
-                null,
-                null);
+                //var search = ldapConnection.Search(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //new string[] { attribute },
+                //false,
+                //null,
+                //null);
 
-                LdapMessage message;
+                //LdapMessage message;
 
-                while ((message = search.getResponse()) != null)
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
+                //    return searchResultMessage.Entry.GetAttributeSet().GetAttribute(attribute)?.StringValue;
+                //}
+
+                //        var searchOptions = new SearchOptions(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //new string[] { attribute });
+                //        var data = ldapConnection.SearchUsingSimplePaging(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            return data.Select(x => x.GetAttributeSet().ContainsKey(attribute) ? x.GetAttributeSet().GetAttribute(attribute)?.StringValue : null).FirstOrDefault();
+                //        }
+                //    }
+                var req = new SearchRequest(string.IsNullOrWhiteSpace(container) ? this._searchBase : container, filter, SearchScope.Subtree, new string[] { attribute });
+                var resp = (SearchResponse)ldapConnection.SendRequest(req);
+                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
                 {
-                    if (!(message is LdapSearchResult searchResultMessage))
+
+                    foreach (SearchResultEntry entry in resp.Entries)
                     {
-                        continue;
+                        return GetStringAttribute(entry.Attributes, attribute);
                     }
-                    return searchResultMessage.Entry.getAttributeSet().getAttribute(attribute)?.StringValue;
                 }
             }
             return null;
@@ -495,112 +740,202 @@ namespace NetApp.Security
         {
             var dn = $"CN={user.FullName},{container ?? _ldapSettings.DomainDistinguishedName}";
 
-            var attributeSet = new LdapAttributeSet
-{
-new LdapAttribute("instanceType", "4"),
-new LdapAttribute("objectCategory", $"CN=Person,CN=Schema,CN=Configuration,{this._ldapSettings.DomainDistinguishedName}"),
-new LdapAttribute("objectClass", new[] {"top", "person", "organizationalPerson", "user"}),
-new LdapAttribute("name", user.FullName),
-new LdapAttribute("cn", $"{user.FullName}"),
-new LdapAttribute("sAMAccountName", user.UserName?.Trim().ToLower()),
-new LdapAttribute("userPrincipalName", $"{user.UserName.Trim().ToLower()}@{this._ldapSettings.DomainName?.Trim()}"),
-new LdapAttribute("unicodePwd", SupportClass.ToSByteArray(Encoding.Unicode.GetBytes($"\"{user.Password?.Trim()}\""))),
-new LdapAttribute("userAccountControl", user.MustChangePasswordOnNextLogon ? "544" : "512"),
-new LdapAttribute("givenName", user.FirstName?.Trim()),
-new LdapAttribute("sn", user.LastName?.Trim()),
-         //new LdapAttribute("mail", user.EmailAddress)
-        };
+            //      var attributeSet = new LdapAttributeSet
+            //{
+            //new LdapAttribute("instanceType", "4"),
+            //new LdapAttribute("objectCategory", $"CN=Person,CN=Schema,CN=Configuration,{this._ldapSettings.DomainDistinguishedName}"),
+            //new LdapAttribute("objectClass", new[] {"top", "person", "organizationalPerson", "user"}),
+            //new LdapAttribute("name", user.FullName),
+            //new LdapAttribute("cn", $"{user.FullName}"),
+            //new LdapAttribute("sAMAccountName", user.UserName?.Trim().ToLower()),
+            //new LdapAttribute("userPrincipalName", $"{user.UserName.Trim().ToLower()}@{this._ldapSettings.DomainName?.Trim()}"),
+            //new LdapAttribute("unicodePwd", Encoding.Unicode.GetBytes($"\"{user.Password?.Trim()}\"")),
+            //new LdapAttribute("userAccountControl", user.MustChangePasswordOnNextLogon ? "544" : "512"),
+            //new LdapAttribute("givenName", user.FirstName?.Trim()),
+            //new LdapAttribute("sn", user.LastName?.Trim()),
+            //      //new LdapAttribute("mail", user.EmailAddress)
+            //      };
+            //      if (!string.IsNullOrWhiteSpace(user.EmailAddress))
+            //      {
+            //          attributeSet.Add(new LdapAttribute("mail", user.EmailAddress.Trim()));
+            //      }
+            //      if (!string.IsNullOrWhiteSpace(user.DisplayName))
+            //      {
+            //          attributeSet.Add(new LdapAttribute("displayName", user.DisplayName.Trim()));
+            //      }
+            //      else
+            //          attributeSet.Add(new LdapAttribute("displayName", user.FullName));
+            //      if (!string.IsNullOrWhiteSpace(user.MiddleName))
+            //      {
+            //          attributeSet.Add(new LdapAttribute("initials", user.MiddleName.Trim()));
+            //      }
+            //      if (!string.IsNullOrWhiteSpace(user.Description))
+            //      {
+            //          attributeSet.Add(new LdapAttribute("description", user.Description.Trim()));
+            //      }
+            //      if (!string.IsNullOrWhiteSpace(user.Phone))
+            //      {
+            //          attributeSet.Add(new LdapAttribute("telephoneNumber", user.Phone.Trim()));
+            //      }
+            //      if (!string.IsNullOrWhiteSpace(user.Address?.Street))
+            //      {
+            //          attributeSet.Add(new LdapAttribute("streetAddress", user.Address.Street.Trim()));
+            //      }
+            //      if (!string.IsNullOrWhiteSpace(user.Address?.City))
+            //      {
+            //          attributeSet.Add(new LdapAttribute("l", user.Address.City.Trim()));
+            //      }
+            //      if (!string.IsNullOrWhiteSpace(user.Address?.PostalCode))
+            //      {
+            //          attributeSet.Add(new LdapAttribute("postalCode", user.Address.PostalCode.Trim()));
+            //      }
+            //      if (!string.IsNullOrWhiteSpace(user.Address?.StateName))
+            //      {
+            //          attributeSet.Add(new LdapAttribute("st", user.Address.StateName.Trim()));
+            //      }
+            //      if (user.Address?.CountryName != null)
+            //      {
+            //          attributeSet.Add(new LdapAttribute("co", user.Address.CountryName));
+            //      }
+            //      if (!string.IsNullOrWhiteSpace(user.Address?.CountryCode))
+            //      {
+            //          attributeSet.Add(new LdapAttribute("c", user.Address.CountryCode.Trim()));
+            //      }
+            //      if (!string.IsNullOrWhiteSpace(user.EmployeeId))
+            //      {
+            //          attributeSet.Add(new LdapAttribute("employeeID", user.EmployeeId.Trim()));
+            //      }
+            //      if (!string.IsNullOrWhiteSpace(user.Division))
+            //      {
+            //          attributeSet.Add(new LdapAttribute("division", user.Division.Trim()));
+            //      }
+            //      if (!string.IsNullOrWhiteSpace(user.Department))
+            //      {
+            //          attributeSet.Add(new LdapAttribute("department", user.Department.Trim()));
+            //      }
+            //      if (!string.IsNullOrWhiteSpace(user.Manager))
+            //      {
+            //          var manager = GetUserByLogonName(user.Manager.Trim());
+            //          if (manager == null)
+            //              throw new Exception($"Invalid manager {user.Manager}.");
+            //          attributeSet.Add(new LdapAttribute("manager", manager.DistinguishedName));
+            //      }
+            //      if (!string.IsNullOrWhiteSpace(user.Title))
+            //      {
+            //          attributeSet.Add(new LdapAttribute("title", user.Title.Trim()));
+            //      }
+            //      var newEntry = new Novell.Directory.Ldap.LdapEntry(dn, attributeSet);
+
+            //      using (var ldapConnection = this.GetConnection())
+            //      {
+            //          ldapConnection.Add(newEntry);
+            //      }
+            AddRequest request = new AddRequest(dn);
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.InstanceType, "4"));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.ObjectCategory, $"CN=Person,CN=Schema,CN=Configuration,{this._ldapSettings.DomainDistinguishedName}"));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.ObjectClass, new[] { "top", "person", "organizationalPerson", "user" }));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Name, user.FullName));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Cn, $"{user.FullName}"));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.SAmAccountName, user.UserName?.Trim().ToLower()));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.UserPrincipalName, $"{user.UserName.Trim().ToLower()}@{this._ldapSettings.DomainName?.Trim()}"));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.UnicodePwd, Encoding.Unicode.GetBytes($"\"{user.Password?.Trim()}\"")));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.UserAccountControl, user.MustChangePasswordOnNextLogon ? "544" : "512"));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.GivenName, user.FirstName?.Trim()));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Sn, user.LastName?.Trim()));
+
             if (!string.IsNullOrWhiteSpace(user.EmailAddress))
             {
-                attributeSet.Add(new LdapAttribute("mail", user.EmailAddress.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Mail, user.EmailAddress.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.DisplayName))
             {
-                attributeSet.Add(new LdapAttribute("displayName", user.DisplayName.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.DisplayName, user.DisplayName.Trim()));
             }
             else
-                attributeSet.Add(new LdapAttribute("displayName", user.FullName));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.DisplayName, user.FullName));
             if (!string.IsNullOrWhiteSpace(user.MiddleName))
             {
-                attributeSet.Add(new LdapAttribute("initials", user.MiddleName.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Initials, user.MiddleName.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.Description))
             {
-                attributeSet.Add(new LdapAttribute("description", user.Description.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Description, user.Description.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.Phone))
             {
-                attributeSet.Add(new LdapAttribute("telephoneNumber", user.Phone.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.TelephoneNumber, user.Phone.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.Address?.Street))
             {
-                attributeSet.Add(new LdapAttribute("streetAddress", user.Address.Street.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.StreetAddress, user.Address.Street.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.Address?.City))
             {
-                attributeSet.Add(new LdapAttribute("l", user.Address.City.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.City, user.Address.City.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.Address?.PostalCode))
             {
-                attributeSet.Add(new LdapAttribute("postalCode", user.Address.PostalCode.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.PostalCode, user.Address.PostalCode.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.Address?.StateName))
             {
-                attributeSet.Add(new LdapAttribute("st", user.Address.StateName.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.State, user.Address.StateName.Trim()));
             }
             if (user.Address?.CountryName != null)
             {
-                attributeSet.Add(new LdapAttribute("co", user.Address.CountryName));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Country, user.Address.CountryName));
             }
             if (!string.IsNullOrWhiteSpace(user.Address?.CountryCode))
             {
-                attributeSet.Add(new LdapAttribute("c", user.Address.CountryCode.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.CountryCode, user.Address.CountryCode.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.EmployeeId))
             {
-                attributeSet.Add(new LdapAttribute("employeeID", user.EmployeeId.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.EmployeeId, user.EmployeeId.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.Division))
             {
-                attributeSet.Add(new LdapAttribute("division", user.Division.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Division, user.Division.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.Department))
             {
-                attributeSet.Add(new LdapAttribute("department", user.Department.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Department, user.Department.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.Manager))
             {
                 var manager = GetUserByLogonName(user.Manager.Trim());
                 if (manager == null)
                     throw new Exception($"Invalid manager {user.Manager}.");
-                attributeSet.Add(new LdapAttribute("manager", manager.DistinguishedName));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Manager, manager.DistinguishedName));
             }
             if (!string.IsNullOrWhiteSpace(user.Title))
             {
-                attributeSet.Add(new LdapAttribute("title", user.Title.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Title, user.Title.Trim()));
             }
-            var newEntry = new Novell.Directory.Ldap.LdapEntry(dn, attributeSet);
-
             using (var ldapConnection = this.GetConnection())
             {
-                ldapConnection.Add(newEntry);
+                var response = ldapConnection.SendRequest(request);
             }
         }
 
-        public bool Authenticate(string distinguishedName, string password)
+        public bool Authenticate(string username, string password)
         {
-            using (var ldapConnection = new LdapConnection() { SecureSocketLayer = _ldapSettings.UseSSL })
+
+            try
             {
-                ldapConnection.Connect(this._ldapSettings.ServerName, this._ldapSettings.ServerPort);
-                try
+                var identifier = new LdapDirectoryIdentifier(_ldapSettings.ServerName, _ldapSettings.ServerPort);
+                using (var ldapConnection = new LdapConnection(identifier))
                 {
-                    ldapConnection.Bind(distinguishedName + (string.IsNullOrWhiteSpace(_ldapSettings.DomainName) ? string.Empty : "@" + _ldapSettings.DomainName), password);
-                    return true;
+                    if (!_ldapSettings.ReferralFollowing)
+                        ldapConnection.SessionOptions.ReferralChasing = ReferralChasingOptions.None;
+                    ldapConnection.SessionOptions.SecureSocketLayer = _ldapSettings.UseSSL;
+                    ldapConnection.Bind(new System.Net.NetworkCredential(username, password));
                 }
-                catch (Exception)
-                {
-                    return false;
-                }
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
         public void ChangePassword(string username, string password, bool forceChange = true)
@@ -612,11 +947,15 @@ new LdapAttribute("sn", user.LastName?.Trim()),
             var user = GetUserByLogonName(username);
             if (user == null)
                 throw new Exception($"Invalid user {username}.");
-            var encodedBytes = SupportClass.ToSByteArray(Encoding.Unicode.GetBytes($"\"{password}\""));
-            var attributePassword = new LdapAttribute("unicodePwd", encodedBytes);
+            var encodedBytes = Encoding.Unicode.GetBytes($"\"{password}\"");
+            var attribute = new DirectoryAttributeModification();
+            attribute.Operation = DirectoryAttributeOperation.Replace;
+            attribute.Name = "unicodePwd";
+            attribute.Add(encodedBytes);
+            var request = new ModifyRequest(user.DistinguishedName, attribute);
             using (var ldapConnection = this.GetConnection())
             {
-                ldapConnection.Modify(user.DistinguishedName, new LdapModification(LdapModification.REPLACE, attributePassword));
+                var response = ldapConnection.SendRequest(request);
             }
             if (forceChange)
             {
@@ -644,28 +983,52 @@ new LdapAttribute("sn", user.LastName?.Trim()),
 
             using (var ldapConnection = this.GetConnection())
             {
-                var search = ldapConnection.Search(
-                this._searchBase,
-                LdapConnection.SCOPE_SUB,
-                filter,
-                this._attributes,
-                false,
-                null,
-                null);
+                //var search = ldapConnection.Search(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes,
+                //false,
+                //null,
+                //null);
 
-                LdapMessage message;
+                //LdapMessage message;
 
-                while ((message = search.getResponse()) != null)
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
+
+                //    user.Add(this.CreateUserFromAttributes(this._searchBase, searchResultMessage.Entry.GetAttributeSet()));
+                //}
+
+                //        var searchOptions = new SearchOptions(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes);
+                //        var data = ldapConnection.SearchUsingSimplePaging(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            user.AddRange(data.Select(x => this.CreateUserFromAttributes(x.Dn, x.GetAttributeSet())));
+                //        }
+                //    }
+                var req = new SearchRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
+                var resp = (SearchResponse)ldapConnection.SendRequest(req);
+                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
                 {
-                    if (!(message is LdapSearchResult searchResultMessage))
-                    {
-                        continue;
-                    }
 
-                    user.Add(this.CreateUserFromAttributes(this._searchBase, searchResultMessage.Entry.getAttributeSet()));
+                    foreach (SearchResultEntry entry in resp.Entries)
+                    {
+                        user.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
+                    }
                 }
             }
-
             return user;
         }
 
@@ -681,22 +1044,17 @@ new LdapAttribute("sn", user.LastName?.Trim()),
             {
                 objectClass = "group";
                 objectCategory = "group";
-
-                entries = this.GetChildren(searchBase ?? this._searchBase, groupDistinguishedName, objectCategory, objectClass, recursive)
+                entries = this.GetChildren(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, groupDistinguishedName, objectCategory, objectClass, recursive)
                 .Cast<T>().ToCollection();
-
             }
 
             if (typeof(T) == typeof(LdapUser))
             {
                 objectCategory = "person";
                 objectClass = "user";
-
-                entries = this.GetChildren(searchBase ?? this._searchBase, groupDistinguishedName, objectCategory, objectClass, recursive).Cast<T>()
+                entries = this.GetChildren(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, groupDistinguishedName, objectCategory, objectClass, recursive).Cast<T>()
                 .ToCollection();
-
             }
-
             return entries;
         }
 
@@ -710,45 +1068,116 @@ new LdapAttribute("sn", user.LastName?.Trim()),
 
             using (var ldapConnection = this.GetConnection())
             {
-                var search = ldapConnection.Search(
-                searchBase ??= this._searchBase,
-                LdapConnection.SCOPE_SUB,
-                filter,
-                this._attributes,
-                false,
-                null,
-                null);
+                //var search = ldapConnection.Search(
+                //searchBase ??= this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes,
+                //false,
+                //null,
+                //null);
 
-                LdapMessage message;
+                //LdapMessage message;
 
-                while ((message = search.getResponse()) != null)
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
+
+                //    var entry = searchResultMessage.Entry;
+
+                //    if (objectClass == "group")
+                //    {
+                //        allChildren.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //        if (recursive)
+                //        {
+                //            foreach (var child in this.GetChildren(searchBase, entry.Dn, objectCategory, objectClass, recursive))
+                //            {
+                //                allChildren.Add(child);
+                //            }
+                //        }
+                //    }
+
+                //    if (objectClass == "user")
+                //    {
+                //        allChildren.Add(this.CreateUserFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //    }
+                //}
+
+                //        var searchOptions = new SearchOptions(
+                //string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes);
+                //        var data = ldapConnection.SearchUsingSimplePaging(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            foreach (var entry in data)
+                //            {
+                //                if (objectClass == "group")
+                //                {
+                //                    allChildren.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //                    if (recursive)
+                //                    {
+                //                        foreach (var child in this.GetChildren(searchBase, entry.Dn, objectCategory, objectClass, recursive))
+                //                        {
+                //                            allChildren.Add(child);
+                //                        }
+                //                    }
+                //                }
+
+                //                if (objectClass == "user")
+                //                {
+                //                    allChildren.Add(this.CreateUserFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //                }
+                //            }
+                //        }
+                //    }
+                //var request = new SearchRequest(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, filter, SearchScope.Subtree, _attributes);
+                //var resp = (SearchResponse)ldapConnection.SendRequest(req);
+                //if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
+                //{
+
+                //    foreach (SearchResultEntry entry in resp.Entries)
+                //    {
+                //        if (objectClass == "group")
+                //        {
+                //            allChildren.Add(this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes));
+                //            if (recursive)
+                //            {
+                //                foreach (var child in this.GetChildren(searchBase, entry.DistinguishedName, objectCategory, objectClass, recursive))
+                //                {
+                //                    allChildren.Add(child);
+                //                }
+                //            }
+                //        }
+                //        if (objectClass == "user")
+                //            allChildren.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
+                //    }
+                //}
+                var result = PagedRequest(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, filter, SearchScope.Subtree, _attributes);
+                foreach (SearchResultEntry entry in result)
                 {
-                    if (!(message is LdapSearchResult searchResultMessage))
-                    {
-                        continue;
-                    }
-
-                    var entry = searchResultMessage.Entry;
-
                     if (objectClass == "group")
                     {
-                        allChildren.Add(this.CreateEntryFromAttributes(entry.DN, entry.getAttributeSet()));
+                        allChildren.Add(this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes));
                         if (recursive)
                         {
-                            foreach (var child in this.GetChildren(searchBase, entry.DN, objectCategory, objectClass, recursive))
+                            foreach (var child in this.GetChildren(searchBase, entry.DistinguishedName, objectCategory, objectClass, recursive))
                             {
                                 allChildren.Add(child);
                             }
                         }
                     }
-
                     if (objectClass == "user")
-                    {
-                        allChildren.Add(this.CreateUserFromAttributes(entry.DN, entry.getAttributeSet()));
-                    }
+                        allChildren.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
                 }
             }
-
             return allChildren;
         }
         protected virtual ICollection<T> GetParent<T>(string searchBase, string groupDistinguishedName = null, bool recursive = true) where T : ILdapEntry, new()
@@ -762,10 +1191,8 @@ new LdapAttribute("sn", user.LastName?.Trim()),
             {
                 objectClass = "group";
                 objectCategory = "group";
-
-                entries = this.GetParent(searchBase ?? this._searchBase, groupDistinguishedName, objectCategory, objectClass, recursive)
+                entries = this.GetParent(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, groupDistinguishedName, objectCategory, objectClass, recursive)
                 .Cast<T>().ToCollection();
-
             }
 
             if (typeof(T) == typeof(LdapUser))
@@ -773,7 +1200,7 @@ new LdapAttribute("sn", user.LastName?.Trim()),
                 objectCategory = "person";
                 objectClass = "user";
 
-                entries = this.GetParent(searchBase ?? this._searchBase, groupDistinguishedName, objectCategory, objectClass, recursive).Cast<T>()
+                entries = this.GetParent(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, groupDistinguishedName, objectCategory, objectClass, recursive).Cast<T>()
                 .ToCollection();
 
             }
@@ -791,108 +1218,195 @@ new LdapAttribute("sn", user.LastName?.Trim()),
             : ($"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={LdapEncoder.FilterEncode(groupDistinguishedName)}))");
             using (var ldapConnection = this.GetConnection())
             {
-                var search = ldapConnection.Search(
-                searchBase ??= this._searchBase,
-                LdapConnection.SCOPE_SUB,
-                filter,
-                this._attributes,
-                false,
-                null,
-                null);
+                //var search = ldapConnection.Search(
+                //searchBase ??= this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes,
+                //false,
+                //null,
+                //null);
 
-                LdapMessage message;
+                //LdapMessage message;
 
-                while ((message = search.getResponse()) != null)
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
+
+                //    var entry = searchResultMessage.Entry;
+
+                //    if (objectClass == "group")
+                //    {
+                //        allChildren.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //        if (recursive)
+                //        {
+                //            foreach (var child in this.GetParent(searchBase, entry.Dn, objectCategory, objectClass, recursive))
+                //            {
+                //                allChildren.Add(child);
+                //            }
+                //        }
+                //    }
+
+                //    if (objectClass == "user")
+                //    {
+                //        allChildren.Add(this.CreateUserFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //    }
+                //}
+
+                //        var searchOptions = new SearchOptions(
+                //string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes);
+                //        var data = ldapConnection.SearchUsingSimplePaging(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            foreach (var entry in data)
+                //            {
+                //                if (objectClass == "group")
+                //                {
+                //                    allChildren.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //                    if (recursive)
+                //                    {
+                //                        foreach (var child in this.GetParent(searchBase, entry.Dn, objectCategory, objectClass, recursive))
+                //                        {
+                //                            allChildren.Add(child);
+                //                        }
+                //                    }
+                //                }
+
+                //                if (objectClass == "user")
+                //                {
+                //                    allChildren.Add(this.CreateUserFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //                }
+                //            }
+                //        }
+                //    }
+
+                //var req = new SearchRequest(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, filter, SearchScope.Subtree, _attributes);
+                //var resp = (SearchResponse)ldapConnection.SendRequest(req);
+                //if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
+                //{
+
+                //    foreach (SearchResultEntry entry in resp.Entries)
+                //    {
+                //        if (objectClass == "group")
+                //        {
+                //            allChildren.Add(this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes));
+                //            if (recursive)
+                //            {
+                //                foreach (var child in this.GetParent(searchBase, entry.DistinguishedName, objectCategory, objectClass, recursive))
+                //                {
+                //                    allChildren.Add(child);
+                //                }
+                //            }
+                //        }
+                //        if (objectClass == "user")
+                //            allChildren.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
+                //    }
+                //}
+                var result = PagedRequest(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, filter, SearchScope.Subtree, _attributes);
+                foreach (SearchResultEntry entry in result)
                 {
-                    if (!(message is LdapSearchResult searchResultMessage))
-                    {
-                        continue;
-                    }
-
-                    var entry = searchResultMessage.Entry;
-
                     if (objectClass == "group")
                     {
-                        allChildren.Add(this.CreateEntryFromAttributes(entry.DN, entry.getAttributeSet()));
+                        allChildren.Add(this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes));
                         if (recursive)
                         {
-                            foreach (var child in this.GetParent(searchBase, entry.DN, objectCategory, objectClass, recursive))
+                            foreach (var child in this.GetParent(searchBase, entry.DistinguishedName, objectCategory, objectClass, recursive))
                             {
                                 allChildren.Add(child);
                             }
                         }
                     }
-
                     if (objectClass == "user")
-                    {
-                        allChildren.Add(this.CreateUserFromAttributes(entry.DN, entry.getAttributeSet()));
-                    }
+                        allChildren.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
                 }
             }
 
             return allChildren;
         }
-        protected LdapUser CreateUserFromAttributes(string distinguishedName, LdapAttributeSet attributeSet)
+        protected LdapUser CreateUserFromAttributes(string distinguishedName, SearchResultAttributeCollection attributes)
         {
             var ldapUser = new LdapUser
             {
-                ObjectSid = attributeSet.getAttribute("objectSid")?.StringValue,
-                ObjectGuid = ConvertToString(attributeSet.getAttribute("objectGUID")?.ByteValue),
-                ObjectCategory = attributeSet.getAttribute("objectCategory")?.StringValue,
-                ObjectClass = attributeSet.getAttribute("objectClass")?.StringValue,
-                IsDomainAdmin = attributeSet.getAttribute("memberOf") != null && attributeSet.getAttribute("memberOf").StringValueArray.Contains("CN=Domain Admins," + this._ldapSettings.SearchBase),
-                MemberOf = attributeSet.getAttribute("memberOf")?.StringValueArray,
-                CommonName = attributeSet.getAttribute("cn")?.StringValue,
-                UserName = attributeSet.getAttribute("name")?.StringValue,
-                SamAccountName = attributeSet.getAttribute("sAMAccountName")?.StringValue,
-                UserPrincipalName = attributeSet.getAttribute("userPrincipalName")?.StringValue,
-                Name = attributeSet.getAttribute("name")?.StringValue,
-                DistinguishedName = attributeSet.getAttribute("distinguishedName")?.StringValue ?? distinguishedName,
-                DisplayName = attributeSet.getAttribute("displayName")?.StringValue,
-                FirstName = attributeSet.getAttribute("givenName")?.StringValue,
-                LastName = attributeSet.getAttribute("sn")?.StringValue,
-                Description = attributeSet.getAttribute("description")?.StringValue,
-                Phone = attributeSet.getAttribute("telephoneNumber")?.StringValue,
-                EmailAddress = attributeSet.getAttribute("mail")?.StringValue,
+                ObjectSid = GetStringAttribute(attributes, LdapAttributes.ObjectSid),
+                ObjectGuid = ConvertToGuidString(GetByteAttribute(attributes, LdapAttributes.ObjectGuid)),
+                ObjectCategory = GetStringAttribute(attributes, LdapAttributes.ObjectCategory),
+                ObjectClass = GetStringAttribute(attributes, LdapAttributes.ObjectClass),
+                IsDomainAdmin = GetStringArrayAttribute(attributes, LdapAttributes.MemberOf) != null ? GetStringArrayAttribute(attributes, LdapAttributes.MemberOf).Contains("CN=Domain Admins,") : false,
+                MemberOf = GetStringArrayAttribute(attributes, LdapAttributes.MemberOf),
+                CommonName = GetStringAttribute(attributes, LdapAttributes.Cn),
+                UserName = GetStringAttribute(attributes, LdapAttributes.Name),
+                SamAccountName = GetStringAttribute(attributes, LdapAttributes.SAmAccountName),
+                UserPrincipalName = GetStringAttribute(attributes, LdapAttributes.UserPrincipalName),
+                Name = GetStringAttribute(attributes, LdapAttributes.Name),
+                DistinguishedName = GetStringAttribute(attributes, LdapAttributes.DistinguishedName),
+                DisplayName = GetStringAttribute(attributes, LdapAttributes.DisplayName),
+                FirstName = GetStringAttribute(attributes, LdapAttributes.GivenName),
+                LastName = GetStringAttribute(attributes, LdapAttributes.Sn),
+                Description = GetStringAttribute(attributes, LdapAttributes.Description),
+                Phone = GetStringAttribute(attributes, LdapAttributes.TelephoneNumber),
+                EmailAddress = GetStringAttribute(attributes, LdapAttributes.Mail),
                 Address = new LdapAddress
                 {
-                    Street = attributeSet.getAttribute("streetAddress")?.StringValue,
-                    City = attributeSet.getAttribute("l")?.StringValue,
-                    PostalCode = attributeSet.getAttribute("postalCode")?.StringValue,
-                    StateName = attributeSet.getAttribute("st")?.StringValue,
-                    CountryName = attributeSet.getAttribute("co")?.StringValue,
-                    CountryCode = attributeSet.getAttribute("c")?.StringValue
+                    Street = GetStringAttribute(attributes, LdapAttributes.StreetAddress),
+                    City = GetStringAttribute(attributes, LdapAttributes.City),
+                    PostalCode = GetStringAttribute(attributes, LdapAttributes.PostalCode),
+                    StateName = GetStringAttribute(attributes, LdapAttributes.State),
+                    CountryName = GetStringAttribute(attributes, LdapAttributes.Country),
+                    CountryCode = GetStringAttribute(attributes, LdapAttributes.CountryCode)
                 },
 
-                SamAccountType = int.Parse(attributeSet.getAttribute("sAMAccountType")?.StringValue ?? "0"),
-                MiddleName = attributeSet.getAttribute("initials")?.StringValue,
-                EmployeeId = attributeSet.getAttribute("employeeID")?.StringValue,
-                Title = attributeSet.getAttribute("title")?.StringValue,
-                Division = attributeSet.getAttribute("division")?.StringValue,
-                Department = attributeSet.getAttribute("department")?.StringValue,
-                Manager = attributeSet.getAttribute("manager")?.StringValue,
-                AccountFlag = attributeSet.getAttribute("userAccountControl").StringValue
+                SamAccountType = int.Parse(GetStringAttribute(attributes, LdapAttributes.SAMAccountType) ?? "0"),
+                MiddleName = GetStringAttribute(attributes, LdapAttributes.Initials),
+                EmployeeId = GetStringAttribute(attributes, LdapAttributes.EmployeeId),
+                Title = GetStringAttribute(attributes, LdapAttributes.Title),
+                Division = GetStringAttribute(attributes, LdapAttributes.Division),
+                Department = GetStringAttribute(attributes, LdapAttributes.Department),
+                Manager = GetStringAttribute(attributes, LdapAttributes.Manager),
+                AccountFlag = GetStringAttribute(attributes, LdapAttributes.UserAccountControl)
             };
 
             return ldapUser;
         }
 
-        protected LdapEntry CreateEntryFromAttributes(string distinguishedName, LdapAttributeSet attributeSet)
+        //protected LdapEntry CreateEntryFromAttributes(string distinguishedName, LdapAttributeSet attributeSet)
+        //{
+        //    return new LdapEntry
+        //    {
+        //        ObjectSid = attributeSet.ContainsKey("objectSid") ? attributeSet.GetAttribute("objectSid")?.StringValue : null,
+        //        ObjectGuid = ConvertToGuidString(attributeSet.ContainsKey("objectGUID") ? attributeSet.GetAttribute("objectGUID")?.ByteValue : null),
+        //        ObjectCategory = attributeSet.ContainsKey("objectCategory") ? attributeSet.GetAttribute("objectCategory")?.StringValue : null,
+        //        ObjectClass = attributeSet.ContainsKey("objectClass") ? attributeSet.GetAttribute("objectClass")?.StringValue : null,
+        //        CommonName = attributeSet.ContainsKey("cn") ? attributeSet.GetAttribute("cn")?.StringValue : null,
+        //        Name = attributeSet.ContainsKey("name") ? attributeSet.GetAttribute("name")?.StringValue : null,
+        //        DistinguishedName = attributeSet.ContainsKey("distinguishedName") ? attributeSet.GetAttribute("distinguishedName")?.StringValue ?? distinguishedName : null,
+        //        SamAccountName = attributeSet.ContainsKey("sAMAccountName") ? attributeSet.GetAttribute("sAMAccountName")?.StringValue : null,
+        //        SamAccountType = int.Parse(attributeSet.ContainsKey("sAMAccountType") ? attributeSet.GetAttribute("sAMAccountType")?.StringValue ?? "0" : "0"),
+        //    };
+        //}
+        protected LdapEntry CreateEntryFromAttributes(string distinguishedName, SearchResultAttributeCollection attributes)
         {
             return new LdapEntry
             {
-                ObjectSid = attributeSet.getAttribute("objectSid")?.StringValue,
-                ObjectGuid = ConvertToString(attributeSet.getAttribute("objectGUID")?.ByteValue),
-                ObjectCategory = attributeSet.getAttribute("objectCategory")?.StringValue,
-                ObjectClass = attributeSet.getAttribute("objectClass")?.StringValue,
-                CommonName = attributeSet.getAttribute("cn")?.StringValue,
-                Name = attributeSet.getAttribute("name")?.StringValue,
-                DistinguishedName = attributeSet.getAttribute("distinguishedName")?.StringValue ?? distinguishedName,
-                SamAccountName = attributeSet.getAttribute("sAMAccountName")?.StringValue,
-                SamAccountType = int.Parse(attributeSet.getAttribute("sAMAccountType")?.StringValue ?? "0"),
+                ObjectSid = GetStringAttribute(attributes, LdapAttributes.ObjectSid),
+                ObjectGuid = ConvertToGuidString(GetByteAttribute(attributes, LdapAttributes.ObjectGuid)),
+                ObjectCategory = GetStringAttribute(attributes, LdapAttributes.ObjectCategory),
+                ObjectClass = GetStringAttribute(attributes, LdapAttributes.ObjectClass),
+                CommonName = GetStringAttribute(attributes, LdapAttributes.Cn),
+                Name = GetStringAttribute(attributes, LdapAttributes.Name),
+                DistinguishedName = GetStringAttribute(attributes, LdapAttributes.DistinguishedName),
+                SamAccountName = GetStringAttribute(attributes, LdapAttributes.SAmAccountName),
+                SamAccountType = int.Parse(GetStringAttribute(attributes, LdapAttributes.SAMAccountType) ?? "0"),
             };
         }
-
         //private SecurityIdentifier GetDomainSid()
         //{
         //    var administratorAcount = new NTAccount(this._ldapSettings.DomainName, "administrator");
@@ -926,12 +1440,12 @@ new LdapAttribute("sn", user.LastName?.Trim()),
             //}
             return uniqueGroups;
         }
-        /// <summary>
-        /// Get nested groups membership for user
-        /// </summary>
-        /// <param name="username"></param>
-        /// <returns></returns>
-        private IEnumerable<string> GetNestedGroupsForUser(string username)
+        /// <summary>
+                        /// Get nested groups membership for user
+                        /// </summary>
+                        /// <param name="username"></param>
+                        /// <returns></returns>
+        private IEnumerable<string> GetNestedGroupsForUser(string username)
         {
             //var items = _cache?.Get<Dictionary<string, HashSet<string>>>(CacheKeyADGroups);
             //var item = items?[username];
@@ -972,41 +1486,71 @@ new LdapAttribute("sn", user.LastName?.Trim()),
         {
             using (var ldapConnection = this.GetConnection())
             {
-                LdapSearchQueue searchQueue = ldapConnection.Search(
-                _searchBase,
-                LdapConnection.SCOPE_SUB,
-                $"(sAMAccountName={username})",
-                new string[] { "cn", "memberOf" },
-                false,
-                null as LdapSearchQueue);
+                //LdapSearchQueue searchQueue = ldapConnection.Search(
+                //_searchBase,
+                //LdapConnection.ScopeSub,
+                //$"(sAMAccountName={username})",
+                //new string[] { "cn", "memberOf" },
+                //false,
+                //null as LdapSearchQueue);
 
-                LdapMessage message;
-                while ((message = searchQueue.getResponse()) != null)
+                //LdapMessage message;
+                //while ((message = searchQueue.getResponse()) != null)
+                //{
+                //    if (message is LdapSearchResult searchResult)
+                //    {
+                //        var entry = searchResult.Entry;
+                //        foreach (string value in HandleEntry(entry))
+                //            yield return value;
+                //    }
+                //    else
+                //        continue;
+                //}
+
+                //        var searchOptions = new SearchOptions(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //$"(sAMAccountName={username})",
+                //new string[] { "cn", "memberOf" });
+                //        var data = ldapConnection.SearchUsingSimplePaging(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            foreach (var item in data)
+                //            {
+                //                foreach (var value in HandleEntry(item))
+                //                    yield return value;
+                //            }
+                //        }
+                var req = new SearchRequest(_searchBase, $"(sAMAccountName={username})", SearchScope.Subtree, new string[] { "cn", "memberOf" });
+                var resp = (SearchResponse)ldapConnection.SendRequest(req);
+                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
                 {
-                    if (message is LdapSearchResult searchResult)
+
+                    foreach (SearchResultEntry entry in resp.Entries)
                     {
-                        var entry = searchResult.Entry;
-                        foreach (string value in HandleEntry(entry))
+                        foreach (var value in HandleEntry(entry))
                             yield return value;
                     }
-                    else
-                        continue;
-                }
-            }
-
-            IEnumerable<string> HandleEntry(Novell.Directory.Ldap.LdapEntry entry)
-            {
-                LdapAttribute attr = entry.getAttribute("memberOf");
-
-                if (attr == null) yield break;
-
-                foreach (string value in attr.StringValueArray)
-                {
-                    string groupName = GetCN(value);
-                    yield return groupName;
                 }
             }
         }
+
+        private IEnumerable<string> HandleEntry(SearchResultEntry entry)
+        {
+            var attr = GetStringArrayAttribute(entry.Attributes, "memberOf");
+
+            if (attr == null) yield break;
+
+            foreach (string value in attr)
+            {
+                string groupName = GetCN(value);
+                yield return groupName;
+            }
+        }
+
         private string GetCN(string value)
         {
             Match match = Regex.Match(value, "^CN=([^,]*)");
@@ -1071,17 +1615,23 @@ new LdapAttribute("sn", user.LastName?.Trim()),
             var userGroups = GetUserGroups(username, false);
             var groupsToAdd = groups?.Except(userGroups);
             if (groupsToAdd == null || groupsToAdd?.Count() == 0) return;
-            using (var ldapConnection = this.GetConnection())
+            foreach (var item in groupsToAdd)
             {
-                foreach (var item in groupsToAdd)
+                var groupDn = GetGroups(item)?.FirstOrDefault()?.DistinguishedName;
+                if (string.IsNullOrWhiteSpace(groupDn))
+                    throw new Exception($"Invalid group {item}.");
+                //LdapModification[] modGroup = new LdapModification[1];
+                //LdapAttribute member = new LdapAttribute("member", userDn);
+                //modGroup[0] = new LdapModification(LdapModification.Add, member);
+                //ldapConnection.Modify(groupDn, modGroup);
+                var attribute = new DirectoryAttributeModification();
+                attribute.Operation = DirectoryAttributeOperation.Add;
+                attribute.Name = "member";
+                attribute.Add(userDn);
+                var request = new ModifyRequest(groupDn, attribute);
+                using (var ldapConnection = this.GetConnection())
                 {
-                    var groupDn = GetGroups(item)?.FirstOrDefault()?.DistinguishedName;
-                    if (string.IsNullOrWhiteSpace(groupDn))
-                        throw new Exception($"Invalid group {item}.");
-                    LdapModification[] modGroup = new LdapModification[1];
-                    LdapAttribute member = new LdapAttribute("member", userDn);
-                    modGroup[0] = new LdapModification(LdapModification.ADD, member);
-                    ldapConnection.Modify(groupDn, modGroup);
+                    var response = ldapConnection.SendRequest(request);
                 }
             }
             //if (string.IsNullOrWhiteSpace(username) || groups == null || groups.Count() == 0)
@@ -1112,17 +1662,23 @@ new LdapAttribute("sn", user.LastName?.Trim()),
             var userGroups = GetUserGroups(username, false);
             var groupsToRemove = groups?.Intersect(userGroups);
             if (groupsToRemove == null || groupsToRemove?.Count() == 0) return;
-            using (var ldapConnection = this.GetConnection())
+            foreach (var item in groups)
             {
-                foreach (var item in groups)
+                var groupDn = GetGroups(item)?.FirstOrDefault()?.DistinguishedName;
+                if (string.IsNullOrWhiteSpace(groupDn))
+                    throw new Exception($"Invalid group {item}.");
+                //LdapModification[] modGroup = new LdapModification[1];
+                //LdapAttribute member = new LdapAttribute("member", userDn);
+                //modGroup[0] = new LdapModification(LdapModification.Delete, member);
+                //ldapConnection.Modify(groupDn, modGroup);
+                var attribute = new DirectoryAttributeModification();
+                attribute.Operation = DirectoryAttributeOperation.Delete;
+                attribute.Name = "member";
+                attribute.Add(userDn);
+                var request = new ModifyRequest(groupDn, attribute);
+                using (var ldapConnection = this.GetConnection())
                 {
-                    var groupDn = GetGroups(item)?.FirstOrDefault()?.DistinguishedName;
-                    if (string.IsNullOrWhiteSpace(groupDn))
-                        throw new Exception($"Invalid group {item}.");
-                    LdapModification[] modGroup = new LdapModification[1];
-                    LdapAttribute member = new LdapAttribute("member", userDn);
-                    modGroup[0] = new LdapModification(LdapModification.DELETE, member);
-                    ldapConnection.Modify(groupDn, modGroup);
+                    var response = ldapConnection.SendRequest(request);
                 }
             }
             //PrincipalContext ctx = new PrincipalContext(ContextType.Domain, _ldapSettings.ServerName + ":" + _ldapSettings.ServerPort, _ldapSettings.DomainDistinguishedName, _ldapSettings.UseSSL ? ContextOptions.SimpleBind | ContextOptions.SecureSocketLayer : ContextOptions.Negotiate | ContextOptions.Signing | ContextOptions.Sealing, _ldapSettings.Credentials.DomainUserName, _encryptionService.Decrypt(_ldapSettings.Credentials.Password));
@@ -1182,7 +1738,7 @@ new LdapAttribute("sn", user.LastName?.Trim()),
             //    {
             //        var search = ldapConnection.Search(
             //        this._searchBase,
-            //        LdapConnection.SCOPE_SUB,
+            //        LdapConnection.ScopeSub,
             //        filter,
             //        this._attributes,
             //        false,
@@ -1196,13 +1752,13 @@ new LdapAttribute("sn", user.LastName?.Trim()),
             //                continue;
             //            }
             //            var entry = searchResultMessage.Entry;
-            //            groups.Add(this.CreateEntryFromAttributes(entry.DN, entry.getAttributeSet()));
+            //            groups.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
             //            if (!recursive)
             //            {
             //                continue;
             //            }
 
-            //            foreach (var child in this.GetChildren<LdapEntry>(string.Empty, entry.DN))
+            //            foreach (var child in this.GetChildren<LdapEntry>(string.Empty, entry.Dn))
             //            {
             //                groups.Add(child);
             //            }
@@ -1247,13 +1803,25 @@ new LdapAttribute("sn", user.LastName?.Trim()),
                 throw new Exception($"User {username} not found.");
             if (attributes?.Count() <= 0)
                 return;
+            //var changes = new List<LdapModification>();
+            //changes.AddRange(attributes.Where(x => !string.IsNullOrWhiteSpace(x.Value)).Select(x => new DirectoryAttributeModification ( DirectoryAttributeOperation.Replace,  new LdapAttribute(x.Key, x.Value) )).ToList());
+            //changes.AddRange(attributes.Where(x => string.IsNullOrWhiteSpace(x.Value)).Select(x => new LdapModification(LdapModification.DELETE, new LdapAttribute(x.Key))).ToList());              
+            //changes.AddRange(attributes.Where(x => string.IsNullOrWhiteSpace(x.Value)).Select(x => new DirectoryAttributeModification(DirectoryAttributeOperation.Replace, new LdapAttribute(x.Key, new string[] { }))).ToList());
+            //ldapConnection.Modify(user.DistinguishedName, changes.ToArray());
+            var changes = new List<DirectoryAttributeModification>();
+            foreach (var item in attributes)
+            {
+                var attribute = new DirectoryAttributeModification();
+                attribute.Operation = DirectoryAttributeOperation.Replace;
+                attribute.Name = item.Key;
+                attribute.Add(item.Value);
+                changes.Add(attribute);
+            }
+
+            var request = new ModifyRequest(user.DistinguishedName, changes.ToArray());
             using (var ldapConnection = this.GetConnection())
             {
-                var changes = new List<LdapModification>();
-                changes.AddRange(attributes.Where(x => !string.IsNullOrWhiteSpace(x.Value)).Select(x => new LdapModification(LdapModification.REPLACE, new LdapAttribute(x.Key, x.Value))).ToList());
-                //changes.AddRange(attributes.Where(x => string.IsNullOrWhiteSpace(x.Value)).Select(x => new LdapModification(LdapModification.DELETE, new LdapAttribute(x.Key))).ToList());              
-                changes.AddRange(attributes.Where(x => string.IsNullOrWhiteSpace(x.Value)).Select(x => new LdapModification(LdapModification.REPLACE, new LdapAttribute(x.Key, new string[] { }))).ToList());
-                ldapConnection.Modify(user.DistinguishedName, changes.ToArray());
+                var response = ldapConnection.SendRequest(request);
             }
         }
         public void ChangeOU(string username, string ouDistinguishedName)
@@ -1268,7 +1836,13 @@ new LdapAttribute("sn", user.LastName?.Trim()),
                 throw new Exception($"Cannot find user {username}.");
             using (var ldapConnection = this.GetConnection())
             {
-                ldapConnection.Rename($"{user.DistinguishedName}", $"CN={user.CommonName}", ouDistinguishedName, true);
+                //ldapConnection.Rename($"{user.DistinguishedName}", $"CN={user.CommonName}", ouDistinguishedName, true);
+                ModifyDNRequest request = new ModifyDNRequest();
+                request.DeleteOldRdn = true;
+                request.DistinguishedName = user.DistinguishedName;
+                request.NewName = $"CN={user.CommonName}";
+                request.NewParentDistinguishedName = ouDistinguishedName;
+                ModifyDNResponse response = (ModifyDNResponse)ldapConnection.SendRequest(request);
             }
         }
         public string GetParentOU(string username)
@@ -1306,30 +1880,53 @@ new LdapAttribute("sn", user.LastName?.Trim()),
 
             using (var ldapConnection = this.GetConnection())
             {
-                var search = ldapConnection.Search(
-                container ?? this._searchBase,
-                LdapConnection.SCOPE_SUB,
-                filter,
-                this._attributes,
-                false,
-                null,
-                null);
+                //var search = ldapConnection.Search(
+                //container ?? this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes,
+                //false,
+                //null,
+                //null);
 
-                LdapMessage message;
+                //LdapMessage message;
 
-                while ((message = search.getResponse()) != null)
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
+
+                //    var entry = searchResultMessage.Entry;
+
+                //    items.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //}
+
+                //        var searchOptions = new SearchOptions(
+                //string.IsNullOrWhiteSpace(container) ? this._searchBase : container,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes);
+                //        var data = ldapConnection.SearchUsingSimplePaging(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            items.AddRange(data.Select(x => this.CreateEntryFromAttributes(x.Dn, x.GetAttributeSet())));
+                //        }
+                var req = new SearchRequest(string.IsNullOrWhiteSpace(container) ? this._searchBase : container, filter, SearchScope.Subtree, _attributes);
+                var resp = (SearchResponse)ldapConnection.SendRequest(req);
+                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
                 {
-                    if (!(message is LdapSearchResult searchResultMessage))
+
+                    foreach (SearchResultEntry entry in resp.Entries)
                     {
-                        continue;
+                        items.Add(this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes));
                     }
-
-                    var entry = searchResultMessage.Entry;
-
-                    items.Add(this.CreateEntryFromAttributes(entry.DN, entry.getAttributeSet()));
                 }
             }
-
             return items;
         }
         public void Delete(string name, LdapPrincipalType type = LdapPrincipalType.User)
@@ -1353,9 +1950,11 @@ new LdapAttribute("sn", user.LastName?.Trim()),
             }
             if (string.IsNullOrWhiteSpace(distinguuishedName))
                 throw new Exception($"Invalid name {name}.");
+            //ldapConnection.Delete(distinguuishedName);
+            var request = new DeleteRequest(distinguuishedName);
             using (var ldapConnection = this.GetConnection())
             {
-                ldapConnection.Delete(distinguuishedName);
+                var response = ldapConnection.SendRequest(request);
             }
         }
         //public List<string> GetComputers(string name, string container=null)
@@ -1410,6 +2009,12 @@ new LdapAttribute("sn", user.LastName?.Trim()),
             byte[] byteData = Array.ConvertAll(sbyteData, (a) => (byte)a);
             return new Guid(byteData).ToString();
         }
+        private string ConvertToGuidString(byte[] byteData)
+        {
+            if (byteData?.Length <= 0)
+                return null;
+            return new Guid(byteData).ToString();
+        }
         private string ConvertGuidToOctetString(string objectGuid)
         {
             if (string.IsNullOrWhiteSpace(objectGuid))
@@ -1429,5 +2034,84 @@ new LdapAttribute("sn", user.LastName?.Trim()),
         //    UserPrincipal user = UserPrincipal.FindByIdentity(ctx, username.Trim());
         //    return user;
         //}
-    }
+        protected sbyte[] ToSByteArray(byte[] byteArray)
+        {
+            var sbyteArray = new sbyte[byteArray.Length];
+            for (var index = 0; index < byteArray.Length; index++)
+                sbyteArray[index] = (sbyte)byteArray[index];
+            return sbyteArray;
+        }
+        private string GetStringAttribute(SearchResultAttributeCollection attributes, string key)
+        {
+            if (attributes == null || !attributes.Contains(key))
+            {
+                return null;
+            }
+            string[] rawVal = (string[])attributes[key].GetValues(typeof(string));
+            return rawVal[0];
+        }
+        private byte[] GetByteAttribute(SearchResultAttributeCollection attributes, string key)
+        {
+            if (attributes == null || !attributes.Contains(key))
+            {
+                return null;
+            }
+            byte[] bva = null;
+            if (attributes[key] != null)
+            {
+                // Deep copy so app can't change the value
+                bva = new byte[((byte[])attributes[key][0]).Length];
+                Array.Copy((Array)attributes[key][0], 0, bva, 0, bva.Length);
+            }
+
+            return bva;
+        }
+        private string[] GetStringArrayAttribute(SearchResultAttributeCollection attributes, string key)
+        {
+            if (attributes == null || !attributes.Contains(key))
+            {
+                return null;
+            }
+
+            //var size = attributes[key].Count;
+            //var sva = new string[size];
+            //for (var j = 0; j < size; j++)
+            //{
+            //    var valueBytes = (byte[])attributes[key][j];
+            //    sva[j] = valueBytes != null && valueBytes?.Length > 0 ? Encoding.UTF8.GetString(valueBytes) : string.Empty;
+            //}
+
+            //return sva;
+            return (string[])attributes[key].GetValues(typeof(string));
+        }
+        protected ICollection<SearchResultEntry> PagedRequest(string distinguishedName, string filter, SearchScope searchScope, params string[] attributeList)
+        {
+            List<SearchResultEntry> result = new List<SearchResultEntry>();
+            var request = new SearchRequest(distinguishedName, filter, searchScope, attributeList);
+            using (var ldapConnection = GetConnection())
+            {
+                PageResultRequestControl prc = new PageResultRequestControl(_ldapSettings.PageSize);
+                request.Controls.Add(prc);
+                while (true)
+                {
+                    SearchResponse response = ldapConnection.SendRequest(request) as SearchResponse;
+                    foreach (DirectoryControl control in response.Controls)
+                    {
+                        if (control is PageResultResponseControl)
+                        {
+                            prc.Cookie = ((PageResultResponseControl)control).Cookie;
+                            break;
+                        }
+                    }
+                    foreach (SearchResultEntry sre in response.Entries)
+                    {
+                        result.Add(sre);
+                    }
+                    if (prc.Cookie.Length == 0)
+                        break;
+                }
+            }
+            return result;
+        }
+    }
 }
