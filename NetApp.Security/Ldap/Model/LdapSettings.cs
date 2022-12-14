@@ -24,5 +24,6 @@
         public string DomainDistinguishedName { get; set; }
         public int PageSize { get; set; } = 1000;
         public LdapCredentials Credentials { get; set; }
+        public bool ReferralFollowing { get; set; }
     }
 }

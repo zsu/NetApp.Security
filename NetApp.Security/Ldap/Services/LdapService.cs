@@ -48,7 +48,7 @@ namespace NetApp.Security
         {
             var ldapConnection = new LdapConnection() { SecureSocketLayer = this._ldapSettings.UseSSL };
             var constrains = ldapConnection.Constraints;
-            constrains.ReferralFollowing = true;
+            constrains.ReferralFollowing = _ldapSettings.ReferralFollowing;
             ldapConnection.Constraints = constrains;
             //Connect function will create a socket connection to the server - Port 389 for insecure and 3269 for secure    
             ldapConnection.Connect(this._ldapSettings.ServerName, this._ldapSettings.ServerPort);
