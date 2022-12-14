@@ -9,7 +9,7 @@
     <PackageTags>Security, Ldap, Active Directory, .Net</PackageTags>
     <AssemblyVersion>1.1.0.0</AssemblyVersion>
     <FileVersion>1.1.0.0</FileVersion>
-    <Version>4.4.0</Version>
+    <Version>6.3.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,7 +18,7 @@
 
   <ItemGroup>
     <PackageReference Include="NetApp.Common" Version="1.1.0" />
-    <PackageReference Include="Novell.Directory.Ldap.NETStandard2_0" Version="3.1.0" />
+    <PackageReference Include="System.DirectoryServices.Protocols" Version="7.0.0" />
   </ItemGroup>
 
 </Project>
