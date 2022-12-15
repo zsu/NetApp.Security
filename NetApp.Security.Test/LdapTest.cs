@@ -36,9 +36,11 @@ namespace NetApp.Security.Test
         }
 
         [TestMethod]
-        public void CreateUser()
+        public void DeleteAndCreateUser()
         {
             string ou = $"OU=ou1,{_ldapSettings.DomainDistinguishedName}";
+            _ldapService.Delete(_username);
+            Assert.IsNull(_ldapService.GetUserByLogonName(_username));
             var item = new LdapUser();
             item.FirstName = "Dev1";
             item.LastName = "Test";
@@ -49,6 +51,7 @@ namespace NetApp.Security.Test
             Assert.IsTrue(user != null);
             Assert.IsTrue(user.FirstName == item.FirstName);
             Assert.IsTrue(user.LastName == item.LastName);
+            _ldapService.DisableAccount(_username, true);
         }
         [TestMethod]
         public void Authenticate()
@@ -79,7 +82,7 @@ namespace NetApp.Security.Test
         [TestMethod]
         public void AddUserToGroup()
         {
-            var group = new List<string> { "group1" };
+            var group = new List<string> { "group1", "group2" };
             _ldapService.RemoveFromGroups(_username, group);
             _ldapService.AddToGroups(_username, group);
             Assert.IsTrue(_ldapService.IsUserInGroup(_username, group));
@@ -88,16 +91,69 @@ namespace NetApp.Security.Test
         [TestMethod]
         public void RemoveFromGroup()
         {
-            var group = new List<string> { "group1" };
+            var group = new List<string> { "group1", "group2" };
             _ldapService.AddToGroups(_username, group);
             _ldapService.RemoveFromGroups(_username, group);
             Assert.IsFalse(_ldapService.IsUserInGroup(_username, group));
         }
         [TestMethod]
-        public void DeleteUser()
+        public void SetUserAttribute()
         {
-            _ldapService.Delete(_username);
-            Assert.IsNull(_ldapService.GetUserByLogonName(_username));
+            var attributes = new List<KeyValuePair<string,string>> { new KeyValuePair<string, string>("mobile","111-111-1111"),new KeyValuePair<string, string>("division","test") };
+            var oldAttributes = new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("mobile", null), new KeyValuePair<string, string>("division", null) };
+            _ldapService.SetUserAttributes(_username, attributes);
+            Assert.IsTrue(_ldapService.GetUserAttribute(_username, "mobile")=="111-111-1111");
+            Assert.IsTrue(_ldapService.GetUserAttribute(_username, "division") == "test");
+            _ldapService.SetUserAttributes(_username, oldAttributes);
+            Assert.IsTrue(_ldapService.GetUserAttribute(_username, "mobile") == null);
+            Assert.IsTrue(_ldapService.GetUserAttribute(_username, "division") == null);
+        }
+        [TestMethod]
+        public void DisableAccount()
+        {
+            _ldapService.DisableAccount(_username, false);
+            var user = _ldapService.GetUserByLogonName(_username);
+            Assert.IsTrue(!user?.Disabled);
+            _ldapService.DisableAccount(_username,true);
+            user=_ldapService.GetUserByLogonName(_username);
+            Assert.IsTrue(user?.Disabled);
+        }
+        [TestMethod]
+        public void SetPasswordExpired()
+        {
+            _ldapService.SetPasswordExpired(_username, true);
+            var user = _ldapService.GetUserByLogonName(_username);
+            var flag = Convert.ToInt32(user.AccountFlag);
+            Assert.IsTrue((flag & 0x800000)!=0);
+        }
+        [TestMethod]
+        public void SetPasswordNeverExpired()
+        {
+            _ldapService.SetPasswordNeverExpires(_username, true);
+            var user = _ldapService.GetUserByLogonName(_username);
+            var flag = Convert.ToInt32(user.AccountFlag);
+            Assert.IsTrue((flag & 0x10000) != 0);
+            _ldapService.SetPasswordNeverExpires(_username, false);
+        }
+        [TestMethod]
+        public void SetManager()
+        {
+            string managername = "dev2test";
+            string ou = $"OU=ou1,{_ldapSettings.DomainDistinguishedName}";
+            _ldapService.Delete(managername);
+            Assert.IsNull(_ldapService.GetUserByLogonName(managername));
+            var item = new LdapUser();
+            item.FirstName = "Dev2";
+            item.LastName = "Test";
+            item.UserName = managername;
+            item.Password = "random1$";
+            _ldapService.AddUser(item, ou);
+
+            _ldapService.SetManager(_username, managername);
+            var user = _ldapService.GetUserByLogonName(_username);
+            var manager = _ldapService.GetUserByLogonName(managername);
+            Assert.IsTrue(user.Manager==manager.DistinguishedName);
+            _ldapService.Delete(managername);
         }
     }
 }
