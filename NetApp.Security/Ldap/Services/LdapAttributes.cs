@@ -58,5 +58,6 @@
         public const string InstanceType = "instanceType";
         public const string UnicodePwd = "unicodePwd";
         public const string SAMAccountType = "sAMAccountType";
+        public const string PwdLastSet = "pwdLastSet";
     }
 }
