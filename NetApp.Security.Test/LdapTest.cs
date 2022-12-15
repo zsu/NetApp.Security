@@ -38,7 +38,7 @@ namespace NetApp.Security.Test
         [TestMethod]
         public void CreateUser()
         {
-            string ou = $"OU=IRMDevelopersTesting,{_ldapSettings.DomainDistinguishedName}";
+            string ou = $"OU=ou1,{_ldapSettings.DomainDistinguishedName}";
             var item = new LdapUser();
             item.FirstName = "Dev1";
             item.LastName = "Test";
@@ -61,9 +61,9 @@ namespace NetApp.Security.Test
         public void ChangeOU()
         {
             var user = _ldapService.GetUserByLogonName(_username);
-            string oldOU = $"OU=IRMDevelopersTesting,{_ldapSettings.DomainDistinguishedName}";
-            string oldParentOU = "IRMDevelopersTesting";
-            string newParentOU = "FinDisc";
+            string oldOU = $"OU=ou1,{_ldapSettings.DomainDistinguishedName}";
+            string oldParentOU = "ou1";
+            string newParentOU = "newou";
             string newOU = $"OU={newParentOU},{oldOU}";
             _ldapService.ChangeOU(_username, newOU);
             Assert.IsTrue(_ldapService.GetParentOU(_username) == newParentOU);
@@ -79,7 +79,7 @@ namespace NetApp.Security.Test
         [TestMethod]
         public void AddUserToGroup()
         {
-            var group = new List<string> { "EVERYONE_CBO_WIDE" };
+            var group = new List<string> { "group1" };
             _ldapService.RemoveFromGroups(_username, group);
             _ldapService.AddToGroups(_username, group);
             Assert.IsTrue(_ldapService.IsUserInGroup(_username, group));
@@ -88,7 +88,7 @@ namespace NetApp.Security.Test
         [TestMethod]
         public void RemoveFromGroup()
         {
-            var group = new List<string> { "EVERYONE_CBO_WIDE" };
+            var group = new List<string> { "group1" };
             _ldapService.AddToGroups(_username, group);
             _ldapService.RemoveFromGroups(_username, group);
             Assert.IsFalse(_ldapService.IsUserInGroup(_username, group));
