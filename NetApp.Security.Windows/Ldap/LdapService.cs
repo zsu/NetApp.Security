@@ -222,7 +222,7 @@ namespace NetApp.Security.Windows
                 //            allChildren.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
                 //    }
                 //}
-                var result = PagedRequest(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, filter, SearchScope.Subtree, _attributes);
+                var result = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, filter, SearchScope.Subtree, _attributes);
                 foreach (SearchResultEntry entry in result)
                 {
                     if (objectClass == "group")
@@ -348,7 +348,7 @@ namespace NetApp.Security.Windows
                 //            }
                 //        }
                 //    }
-                var result = PagedRequest(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, filter, SearchScope.Subtree, _attributes);
+                var result = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, filter, SearchScope.Subtree, _attributes);
                 foreach (SearchResultEntry entry in result)
                 {
                     if (objectClass == "group")
