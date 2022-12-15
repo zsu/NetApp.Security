@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using System.DirectoryServices.Protocols;
 using Org.BouncyCastle.Asn1.Cms;
 using Org.BouncyCastle.Utilities;
+using System.ComponentModel;
 
 namespace NetApp.Security
 {
@@ -80,84 +81,79 @@ namespace NetApp.Security
 
             using (var ldapConnection = this.GetConnection())
             {
-                //var search = ldapConnection.Search(
-                //this._searchBase,
-                //LdapConnection.ScopeSub,
-                //filter,
-                //this._attributes,
-                //false,
-                //null);
+                //var search = ldapConnection.Search(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes,
+                //false,
+                //null);
 
-                //LdapMessage message;
+                //LdapMessage message;
 
-                //while ((message = search.getResponse()) != null)
-                //{
-                //    if (!(message is LdapSearchResult searchResultMessage))
-                //    {
-                //        continue;
-                //    }
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
 
-                //    var entry = searchResultMessage.Entry;
+                //    var entry = searchResultMessage.Entry;
 
-                //    groups.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //    groups.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
 
-                //    if (!getChildGroups)
-                //    {
-                //        continue;
-                //    }
+                //    if (!getChildGroups)
+                //    {
+                //        continue;
+                //    }
 
-                //    foreach (var child in this.GetChildren<LdapEntry>(string.Empty, entry.Dn))
-                //    {
-                //        groups.Add(child);
-                //    }
-                //}
+                //    foreach (var child in this.GetChildren<LdapEntry>(string.Empty, entry.Dn))
+                //    {
+                //        groups.Add(child);
+                //    }
+                //}
 
-                //        var searchOptions = new SearchOptions(
-                //this._searchBase,
-                //LdapConnection.ScopeSub,
-                //filter,
-                //this._attributes);
-                //        var data = ldapConnection.SearchUsingSimplePaging(
-                //            searchOptions,
-                //            _ldapSettings.PageSize
-                //          );
-                //        if (data?.Count > 0)
-                //        {
-                //            foreach (var entry in data)
-                //            {
-                //                groups.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
-                //                if (!getChildGroups)
-                //                {
-                //                    continue;
-                //                }
+                //        var searchOptions = new SearchOptions(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes);
+                //        var data = ldapConnection.SearchUsingSimplePaging(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            foreach (var entry in data)
+                //            {
+                //                groups.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //                if (!getChildGroups)
+                //                {
+                //                    continue;
+                //                }
 
-                //                foreach (var child in this.GetChildren<LdapEntry>(string.Empty, entry.Dn))
-                //                {
-                //                    groups.Add(child);
-                //                }
-                //            }
-                //        }
-                //    }
+                //                foreach (var child in this.GetChildren<LdapEntry>(string.Empty, entry.Dn))
+                //                {
+                //                    groups.Add(child);
+                //                }
+                //            }
+                //        }
+                //    }
 
-                //    return groups.DistinctBy(x => x.Name).ToList();
-                var req = new SearchRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
-                var resp = (SearchResponse)ldapConnection.SendRequest(req);
-                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
+                //    return groups.DistinctBy(x => x.Name).ToList();
+                var result = PagedRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
+                foreach (SearchResultEntry entry in result)
                 {
+                    groups.Add(this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes));
 
-                    foreach (SearchResultEntry entry in resp.Entries)
+                    if (!getChildGroups)
                     {
-                        groups.Add(this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes));
+                        continue;
+                    }
 
-                        if (!getChildGroups)
-                        {
-                            continue;
-                        }
-
-                        foreach (var child in this.GetChildren<LdapEntry>(string.Empty, entry.DistinguishedName))
-                        {
-                            groups.Add(child);
-                        }
+                    foreach (var child in this.GetChildren<LdapEntry>(string.Empty, entry.DistinguishedName))
+                    {
+                        groups.Add(child);
                     }
                 }
             }
@@ -200,50 +196,46 @@ namespace NetApp.Security
 
             using (var ldapConnection = this.GetConnection())
             {
-                //var search = ldapConnection.Search(
-                //this._searchBase,
-                //LdapConnection.ScopeSub,
-                //filter,
-                //this._attributes,
-                //false, null);
+                //var search = ldapConnection.Search(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes,
+                //false, null);
 
-                //LdapMessage message;
+                //LdapMessage message;
 
-                //while ((message = search.getResponse()) != null)
-                //{
-                //    if (!(message is LdapSearchResult searchResultMessage))
-                //    {
-                //        continue;
-                //    }
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
 
-                //    users.Add(this.CreateUserFromAttributes(this._searchBase,
-                //    searchResultMessage.Entry.GetAttributeSet()));
-                //}
+                //    users.Add(this.CreateUserFromAttributes(this._searchBase,
+                //    searchResultMessage.Entry.GetAttributeSet()));
+                //}
 
-                //        var searchOptions = new SearchOptions(
-                //this._searchBase,
-                //LdapConnection.ScopeSub,
-                //filter,
-                //this._attributes);
-                //        var data = ldapConnection.SearchUsingSimplePaging(
-                //            searchOptions,
-                //            _ldapSettings.PageSize
-                //          );
-                //        if (data?.Count > 0)
-                //        {
-                //            users.AddRange(data.Select(x => this.CreateUserFromAttributes(x.Dn, x.GetAttributeSet())));
-                //        }
-                //    }
+                //        var searchOptions = new SearchOptions(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes);
+                //        var data = ldapConnection.SearchUsingSimplePaging(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            users.AddRange(data.Select(x => this.CreateUserFromAttributes(x.Dn, x.GetAttributeSet())));
+                //        }
+                //    }
 
-                //    return users;
-                var req = new SearchRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
-                var resp = (SearchResponse)ldapConnection.SendRequest(req);
-                while (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
+                //    return users;
+                var result = PagedRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
+                foreach (SearchResultEntry entry in result)
                 {
-                    foreach (SearchResultEntry entry in resp.Entries)
-                    {
-                        users.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
-                    }
+                    users.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
                 }
             }
             return users;
@@ -291,14 +283,10 @@ namespace NetApp.Security
                 //            users.AddRange(data.Select(x => this.CreateUserFromAttributes(x.Dn, x.GetAttributeSet())));
                 //        }
                 //    }
-                var req = new SearchRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
-                var resp = (SearchResponse)ldapConnection.SendRequest(req);
-                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
+                var result = PagedRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
+                foreach (SearchResultEntry entry in result)
                 {
-                    foreach (SearchResultEntry entry in resp.Entries)
-                    {
-                        users.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
-                    }
+                    users.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
                 }
             }
             return users;
@@ -350,15 +338,11 @@ namespace NetApp.Security
                 //            user = data.Select(x => this.CreateUserFromAttributes(x.Dn, x.GetAttributeSet())).FirstOrDefault();
                 //        }
                 //    }
-                var req = new SearchRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
-                var resp = (SearchResponse)ldapConnection.SendRequest(req);
-                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
+                var result = PagedRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
+                foreach (SearchResultEntry entry in result)
                 {
-                    foreach (SearchResultEntry entry in resp.Entries)
-                    {
-                        user = this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes);
-                        break;
-                    }
+                    user = this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes);
+                    break;
                 }
             }
             return user;
@@ -406,15 +390,10 @@ namespace NetApp.Security
                 //            user.AddRange(data.Select(x => this.CreateUserFromAttributes(x.Dn, x.GetAttributeSet())));
                 //        }
                 //    }
-                var req = new SearchRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
-                var resp = (SearchResponse)ldapConnection.SendRequest(req);
-                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
+                var result = PagedRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
+                foreach (SearchResultEntry entry in result)
                 {
-
-                    foreach (SearchResultEntry entry in resp.Entries)
-                    {
-                        user.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
-                    }
+                    user.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
                 }
             }
             return user;
@@ -461,16 +440,11 @@ namespace NetApp.Security
                 //            user = data.Select(x => this.CreateUserFromAttributes(x.Dn, x.GetAttributeSet())).FirstOrDefault();
                 //        }
                 //    }
-                var req = new SearchRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
-                var resp = (SearchResponse)ldapConnection.SendRequest(req);
-                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
+                var result = PagedRequest(string.IsNullOrWhiteSpace(container) ? this._searchBase : container, filter, SearchScope.Subtree, _attributes);
+                foreach (SearchResultEntry entry in result)
                 {
-
-                    foreach (SearchResultEntry entry in resp.Entries)
-                    {
-                        user = this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes);
-                        break;
-                    }
+                    user = this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes);
+                    break;
                 }
             }
             return user;
@@ -517,16 +491,11 @@ namespace NetApp.Security
                 //            result = data.Select(x => this.CreateEntryFromAttributes(x.Dn, x.GetAttributeSet())).FirstOrDefault();
                 //        }
                 //    }
-                var req = new SearchRequest(string.IsNullOrWhiteSpace(container) ? this._searchBase : container, filter, SearchScope.Subtree, _attributes);
-                var resp = (SearchResponse)ldapConnection.SendRequest(req);
-                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
+                var result1 = PagedRequest(string.IsNullOrWhiteSpace(container) ? this._searchBase : container, filter, SearchScope.Subtree, _attributes);
+                foreach (SearchResultEntry entry in result1)
                 {
-
-                    foreach (SearchResultEntry entry in resp.Entries)
-                    {
-                        result = this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes);
-                        break;
-                    }
+                    result = this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes);
+                    break;
                 }
             }
             return result;
@@ -572,15 +541,11 @@ namespace NetApp.Security
                 //            return data.Select(x => x.GetAttributeSet().ContainsKey(attribute) ? x.GetAttributeSet().GetAttribute(attribute)?.StringValue : null).FirstOrDefault();
                 //        }
                 //    }
-                var req = new SearchRequest(string.IsNullOrWhiteSpace(container) ? this._searchBase : container, filter, SearchScope.Subtree, new string[] { attribute });
-                var resp = (SearchResponse)ldapConnection.SendRequest(req);
-                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
-                {
+                var result = PagedRequest(string.IsNullOrWhiteSpace(container) ? this._searchBase : container, filter, SearchScope.Subtree, new string[] { attribute });
 
-                    foreach (SearchResultEntry entry in resp.Entries)
-                    {
-                        return GetStringAttribute(entry.Attributes, attribute);
-                    }
+                foreach (SearchResultEntry entry in result)
+                {
+                    return GetStringAttribute(entry.Attributes, attribute);
                 }
             }
             return null;
@@ -1016,15 +981,10 @@ namespace NetApp.Security
                 //            user.AddRange(data.Select(x => this.CreateUserFromAttributes(x.Dn, x.GetAttributeSet())));
                 //        }
                 //    }
-                var req = new SearchRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
-                var resp = (SearchResponse)ldapConnection.SendRequest(req);
-                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
+                var result = PagedRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
+                foreach (SearchResultEntry entry in result)
                 {
-
-                    foreach (SearchResultEntry entry in resp.Entries)
-                    {
-                        user.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
-                    }
+                    user.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
                 }
             }
             return user;
@@ -1484,54 +1444,49 @@ namespace NetApp.Security
         {
             using (var ldapConnection = this.GetConnection())
             {
-                //LdapSearchQueue searchQueue = ldapConnection.Search(
-                //_searchBase,
-                //LdapConnection.ScopeSub,
-                //$"(sAMAccountName={username})",
-                //new string[] { "cn", "memberOf" },
-                //false,
-                //null as LdapSearchQueue);
+                //LdapSearchQueue searchQueue = ldapConnection.Search(
+                //_searchBase,
+                //LdapConnection.ScopeSub,
+                //$"(sAMAccountName={username})",
+                //new string[] { "cn", "memberOf" },
+                //false,
+                //null as LdapSearchQueue);
 
-                //LdapMessage message;
-                //while ((message = searchQueue.getResponse()) != null)
-                //{
-                //    if (message is LdapSearchResult searchResult)
-                //    {
-                //        var entry = searchResult.Entry;
-                //        foreach (string value in HandleEntry(entry))
-                //            yield return value;
-                //    }
-                //    else
-                //        continue;
-                //}
+                //LdapMessage message;
+                //while ((message = searchQueue.getResponse()) != null)
+                //{
+                //    if (message is LdapSearchResult searchResult)
+                //    {
+                //        var entry = searchResult.Entry;
+                //        foreach (string value in HandleEntry(entry))
+                //            yield return value;
+                //    }
+                //    else
+                //        continue;
+                //}
 
-                //        var searchOptions = new SearchOptions(
-                //this._searchBase,
-                //LdapConnection.ScopeSub,
-                //$"(sAMAccountName={username})",
-                //new string[] { "cn", "memberOf" });
-                //        var data = ldapConnection.SearchUsingSimplePaging(
-                //            searchOptions,
-                //            _ldapSettings.PageSize
-                //          );
-                //        if (data?.Count > 0)
-                //        {
-                //            foreach (var item in data)
-                //            {
-                //                foreach (var value in HandleEntry(item))
-                //                    yield return value;
-                //            }
-                //        }
-                var req = new SearchRequest(_searchBase, $"(sAMAccountName={username})", SearchScope.Subtree, new string[] { "cn", "memberOf" });
-                var resp = (SearchResponse)ldapConnection.SendRequest(req);
-                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
+                //        var searchOptions = new SearchOptions(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //$"(sAMAccountName={username})",
+                //new string[] { "cn", "memberOf" });
+                //        var data = ldapConnection.SearchUsingSimplePaging(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            foreach (var item in data)
+                //            {
+                //                foreach (var value in HandleEntry(item))
+                //                    yield return value;
+                //            }
+                //        }
+                var result = PagedRequest(_searchBase, $"(sAMAccountName={username})", SearchScope.Subtree, new string[] { "cn", "memberOf" });
+                foreach (SearchResultEntry entry in result)
                 {
-
-                    foreach (SearchResultEntry entry in resp.Entries)
-                    {
-                        foreach (var value in HandleEntry(entry))
-                            yield return value;
-                    }
+                    foreach (var value in HandleEntry(entry))
+                        yield return value;
                 }
             }
         }
@@ -1914,15 +1869,10 @@ namespace NetApp.Security
                 //        {
                 //            items.AddRange(data.Select(x => this.CreateEntryFromAttributes(x.Dn, x.GetAttributeSet())));
                 //        }
-                var req = new SearchRequest(string.IsNullOrWhiteSpace(container) ? this._searchBase : container, filter, SearchScope.Subtree, _attributes);
-                var resp = (SearchResponse)ldapConnection.SendRequest(req);
-                if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
+                var result = PagedRequest(string.IsNullOrWhiteSpace(container) ? this._searchBase : container, filter, SearchScope.Subtree, _attributes);
+                foreach (SearchResultEntry entry in result)
                 {
-
-                    foreach (SearchResultEntry entry in resp.Entries)
-                    {
-                        items.Add(this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes));
-                    }
+                    items.Add(this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes));
                 }
             }
             return items;
