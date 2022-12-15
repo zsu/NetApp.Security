@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using System.DirectoryServices.Protocols;
 using Org.BouncyCastle.Asn1.Cms;
 using Org.BouncyCastle.Utilities;
+using System.ComponentModel;
 
 namespace NetApp.Security
 {
@@ -24,13 +25,13 @@ namespace NetApp.Security
 
         protected readonly string[] _attributes =
         {
-      LdapAttributes.ObjectSid,LdapAttributes.ObjectGuid,LdapAttributes.ObjectCategory,LdapAttributes.ObjectClass,LdapAttributes.MemberOf,
-      LdapAttributes.Name,LdapAttributes.Cn,LdapAttributes.DistinguishedName,LdapAttributes.SAmAccountName,LdapAttributes.UserPrincipalName,
-      LdapAttributes.DisplayName,LdapAttributes.GivenName,LdapAttributes.Sn,LdapAttributes.Description,LdapAttributes.TelephoneNumber,
-      LdapAttributes.Mail,LdapAttributes.StreetAddress,LdapAttributes.PostalCode,LdapAttributes.City,LdapAttributes.State,LdapAttributes.Country,
-      LdapAttributes.CountryCode,LdapAttributes.Department,LdapAttributes.Division,LdapAttributes.Manager,LdapAttributes.Title,LdapAttributes.UserAccountControl,
-      LdapAttributes.EmployeeId,LdapAttributes.Initials
-    };
+            LdapAttributes.ObjectSid,LdapAttributes.ObjectGuid,LdapAttributes.ObjectCategory,LdapAttributes.ObjectClass,LdapAttributes.MemberOf,
+            LdapAttributes.Name,LdapAttributes.Cn,LdapAttributes.DistinguishedName,LdapAttributes.SAmAccountName,LdapAttributes.UserPrincipalName,
+            LdapAttributes.DisplayName,LdapAttributes.GivenName,LdapAttributes.Sn,LdapAttributes.Description,LdapAttributes.TelephoneNumber,
+            LdapAttributes.Mail,LdapAttributes.StreetAddress,LdapAttributes.PostalCode,LdapAttributes.City,LdapAttributes.State,LdapAttributes.Country,
+            LdapAttributes.CountryCode,LdapAttributes.Department,LdapAttributes.Division,LdapAttributes.Manager,LdapAttributes.Title,LdapAttributes.UserAccountControl,
+            LdapAttributes.EmployeeId,LdapAttributes.Initials
+        };
         public LdapService(IOptions<LdapSettings> options)
         {
             this._ldapSettings = options.Value;
@@ -82,83 +83,79 @@ namespace NetApp.Security
 
             using (var ldapConnection = this.GetConnection())
             {
-                //var search = ldapConnection.Search(
-                //this._searchBase,
-                //LdapConnection.ScopeSub,
-                //filter,
-                //this._attributes,
-                //false,
-                //null);
+                //var search = ldapConnection.Search(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes,
+                //false,
+                //null);
 
-                //LdapMessage message;
+                //LdapMessage message;
 
-                //while ((message = search.getResponse()) != null)
-                //{
-                //    if (!(message is LdapSearchResult searchResultMessage))
-                //    {
-                //        continue;
-                //    }
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
 
-                //    var entry = searchResultMessage.Entry;
+                //    var entry = searchResultMessage.Entry;
 
-                //    groups.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //    groups.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
 
-                //    if (!getChildGroups)
-                //    {
-                //        continue;
-                //    }
+                //    if (!getChildGroups)
+                //    {
+                //        continue;
+                //    }
 
-                //    foreach (var child in this.GetChildren<LdapEntry>(string.Empty, entry.Dn))
-                //    {
-                //        groups.Add(child);
-                //    }
-                //}
+                //    foreach (var child in this.GetChildren<LdapEntry>(string.Empty, entry.Dn))
+                //    {
+                //        groups.Add(child);
+                //    }
+                //}
 
-                //        var searchOptions = new SearchOptions(
-                //this._searchBase,
-                //LdapConnection.ScopeSub,
-                //filter,
-                //this._attributes);
-                //        var data = ldapConnection.SearchUsingSimplePaging(
-                //            searchOptions,
-                //            _ldapSettings.PageSize
-                //          );
-                //        if (data?.Count > 0)
-                //        {
-                //            foreach (var entry in data)
-                //            {
-                //                groups.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
-                //                if (!getChildGroups)
-                //                {
-                //                    continue;
-                //                }
+                //        var searchOptions = new SearchOptions(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes);
+                //        var data = ldapConnection.SearchUsingSimplePaging(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            foreach (var entry in data)
+                //            {
+                //                groups.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //                if (!getChildGroups)
+                //                {
+                //                    continue;
+                //                }
 
-                //                foreach (var child in this.GetChildren<LdapEntry>(string.Empty, entry.Dn))
-                //                {
-                //                    groups.Add(child);
-                //                }
-                //            }
-                //        }
-                //    }
+                //                foreach (var child in this.GetChildren<LdapEntry>(string.Empty, entry.Dn))
+                //                {
+                //                    groups.Add(child);
+                //                }
+                //            }
+                //        }
+                //    }
 
                 //    return groups.DistinctBy(x => x.Name).ToList();
                 var result = PagedRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
                 foreach (SearchResultEntry entry in result)
                 {
+                    groups.Add(this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes));
 
-                    foreach (SearchResultEntry entry in resp.Entries)
+                    if (!getChildGroups)
                     {
-                        groups.Add(this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes));
+                        continue;
+                    }
 
-                        if (!getChildGroups)
-                        {
-                            continue;
-                        }
-
-                        foreach (var child in this.GetChildren<LdapEntry>(string.Empty, entry.DistinguishedName))
-                        {
-                            groups.Add(child);
-                        }
+                    foreach (var child in this.GetChildren<LdapEntry>(string.Empty, entry.DistinguishedName))
+                    {
+                        groups.Add(child);
                     }
                 }
             }
@@ -201,49 +198,46 @@ namespace NetApp.Security
 
             using (var ldapConnection = this.GetConnection())
             {
-                //var search = ldapConnection.Search(
-                //this._searchBase,
-                //LdapConnection.ScopeSub,
-                //filter,
-                //this._attributes,
-                //false, null);
+                //var search = ldapConnection.Search(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes,
+                //false, null);
 
-                //LdapMessage message;
+                //LdapMessage message;
 
-                //while ((message = search.getResponse()) != null)
-                //{
-                //    if (!(message is LdapSearchResult searchResultMessage))
-                //    {
-                //        continue;
-                //    }
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
 
-                //    users.Add(this.CreateUserFromAttributes(this._searchBase,
-                //    searchResultMessage.Entry.GetAttributeSet()));
-                //}
+                //    users.Add(this.CreateUserFromAttributes(this._searchBase,
+                //    searchResultMessage.Entry.GetAttributeSet()));
+                //}
 
-                //        var searchOptions = new SearchOptions(
-                //this._searchBase,
-                //LdapConnection.ScopeSub,
-                //filter,
-                //this._attributes);
-                //        var data = ldapConnection.SearchUsingSimplePaging(
-                //            searchOptions,
-                //            _ldapSettings.PageSize
-                //          );
-                //        if (data?.Count > 0)
-                //        {
-                //            users.AddRange(data.Select(x => this.CreateUserFromAttributes(x.Dn, x.GetAttributeSet())));
-                //        }
-                //    }
+                //        var searchOptions = new SearchOptions(
+                //this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes);
+                //        var data = ldapConnection.SearchUsingSimplePaging(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            users.AddRange(data.Select(x => this.CreateUserFromAttributes(x.Dn, x.GetAttributeSet())));
+                //        }
+                //    }
 
                 //    return users;
                 var result = PagedRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
                 foreach (SearchResultEntry entry in result)
                 {
-                    foreach (SearchResultEntry entry in resp.Entries)
-                    {
-                        users.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
-                    }
+                    users.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
                 }
             }
             return users;
@@ -294,10 +288,7 @@ namespace NetApp.Security
                 var result = PagedRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
                 foreach (SearchResultEntry entry in result)
                 {
-                    foreach (SearchResultEntry entry in resp.Entries)
-                    {
-                        users.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
-                    }
+                    users.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
                 }
             }
             return users;
@@ -352,11 +343,8 @@ namespace NetApp.Security
                 var result = PagedRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
                 foreach (SearchResultEntry entry in result)
                 {
-                    foreach (SearchResultEntry entry in resp.Entries)
-                    {
-                        user = this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes);
-                        break;
-                    }
+                    user = this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes);
+                    break;
                 }
             }
             return user;
@@ -407,11 +395,7 @@ namespace NetApp.Security
                 var result = PagedRequest(_searchBase, filter, SearchScope.Subtree, _attributes);
                 foreach (SearchResultEntry entry in result)
                 {
-
-                    foreach (SearchResultEntry entry in resp.Entries)
-                    {
-                        user.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
-                    }
+                    user.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
                 }
             }
             return user;
@@ -561,10 +545,9 @@ namespace NetApp.Security
                 //    }
                 var result = PagedRequest(string.IsNullOrWhiteSpace(container) ? this._searchBase : container, filter, SearchScope.Subtree, new string[] { attribute });
 
-                    foreach (SearchResultEntry entry in resp.Entries)
-                    {
-                        return GetStringAttribute(entry.Attributes, attribute);
-                    }
+                foreach (SearchResultEntry entry in result)
+                {
+                    return GetStringAttribute(entry.Attributes, attribute);
                 }
             }
             return null;
@@ -1137,7 +1120,7 @@ namespace NetApp.Security
                 //            allChildren.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
                 //    }
                 //}
-                var result = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, filter, SearchScope.Subtree, _attributes);
+                var result = PagedRequest(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, filter, SearchScope.Subtree, _attributes);
                 foreach (SearchResultEntry entry in result)
                 {
                     if (objectClass == "group")
@@ -1288,7 +1271,7 @@ namespace NetApp.Security
                 //            allChildren.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
                 //    }
                 //}
-                var result = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, filter, SearchScope.Subtree, _attributes);
+                var result = PagedRequest(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, filter, SearchScope.Subtree, _attributes);
                 foreach (SearchResultEntry entry in result)
                 {
                     if (objectClass == "group")
@@ -1418,10 +1401,10 @@ namespace NetApp.Security
             return uniqueGroups;
         }
         /// <summary>
-                                /// Get nested groups membership for user
-                                /// </summary>
-                                /// <param name="username"></param>
-                                /// <returns></returns>
+                        /// Get nested groups membership for user
+                        /// </summary>
+                        /// <param name="username"></param>
+                        /// <returns></returns>
         private IEnumerable<string> GetNestedGroupsForUser(string username)
         {
             //var items = _cache?.Get<Dictionary<string, HashSet<string>>>(CacheKeyADGroups);
@@ -1463,26 +1446,26 @@ namespace NetApp.Security
         {
             using (var ldapConnection = this.GetConnection())
             {
-                //LdapSearchQueue searchQueue = ldapConnection.Search(
-                //_searchBase,
-                //LdapConnection.ScopeSub,
-                //$"(sAMAccountName={username})",
-                //new string[] { "cn", "memberOf" },
-                //false,
-                //null as LdapSearchQueue);
+                //LdapSearchQueue searchQueue = ldapConnection.Search(
+                //_searchBase,
+                //LdapConnection.ScopeSub,
+                //$"(sAMAccountName={username})",
+                //new string[] { "cn", "memberOf" },
+                //false,
+                //null as LdapSearchQueue);
 
-                //LdapMessage message;
-                //while ((message = searchQueue.getResponse()) != null)
-                //{
-                //    if (message is LdapSearchResult searchResult)
-                //    {
-                //        var entry = searchResult.Entry;
-                //        foreach (string value in HandleEntry(entry))
-                //            yield return value;
-                //    }
-                //    else
-                //        continue;
-                //}
+                //LdapMessage message;
+                //while ((message = searchQueue.getResponse()) != null)
+                //{
+                //    if (message is LdapSearchResult searchResult)
+                //    {
+                //        var entry = searchResult.Entry;
+                //        foreach (string value in HandleEntry(entry))
+                //            yield return value;
+                //    }
+                //    else
+                //        continue;
+                //}
 
                 //        var searchOptions = new SearchOptions(
                 //this._searchBase,
@@ -1784,16 +1767,9 @@ namespace NetApp.Security
             foreach (var item in attributes)
             {
                 var attribute = new DirectoryAttributeModification();
-                if (string.IsNullOrWhiteSpace(item.Value))
-                {
-                    attribute.Operation = DirectoryAttributeOperation.Delete;
-                }
-                else
-                {
-                    attribute.Operation = DirectoryAttributeOperation.Replace;
-                    attribute.Add(item.Value);
-                }
+                attribute.Operation = DirectoryAttributeOperation.Replace;
                 attribute.Name = item.Key;
+                attribute.Add(item.Value);
                 changes.Add(attribute);
             }
 
@@ -1931,35 +1907,6 @@ namespace NetApp.Security
                 var response = ldapConnection.SendRequest(request);
             }
         }
-        protected ICollection<SearchResultEntry> PagingHandler(string distinguishedName, string filter, SearchScope searchScope, params string[] attributeList)
-        {
-            List<SearchResultEntry> result = new List<SearchResultEntry>();
-            var request = new SearchRequest(distinguishedName, filter, searchScope, attributeList);
-            using (var ldapConnection = GetConnection())
-            {
-                PageResultRequestControl prc = new PageResultRequestControl(_ldapSettings.PageSize);
-                request.Controls.Add(prc);
-                while (true)
-                {
-                    SearchResponse response = ldapConnection.SendRequest(request) as SearchResponse;
-                    foreach (DirectoryControl control in response.Controls)
-                    {
-                        if (control is PageResultResponseControl)
-                        {
-                            prc.Cookie = ((PageResultResponseControl)control).Cookie;
-                            break;
-                        }
-                    }
-                    foreach (SearchResultEntry sre in response.Entries)
-                    {
-                        result.Add(sre);
-                    }
-                    if (prc.Cookie.Length == 0)
-                        break;
-                }
-            }
-            return result;
-        }
         //public List<string> GetComputers(string name, string container=null)
         //{
         //    PrincipalContext ctx = new PrincipalContext(ContextType.Domain, _ldapSettings.ServerName + ":" + _ldapSettings.ServerPort, container ??= _ldapSettings.DomainDistinguishedName, _ldapSettings.UseSSL ? ContextOptions.SimpleBind | ContextOptions.SecureSocketLayer : ContextOptions.Negotiate | ContextOptions.Signing | ContextOptions.Sealing, _ldapSettings.Credentials.DomainUserName, _encryptionService.Decrypt(_ldapSettings.Credentials.Password));
@@ -2037,7 +1984,7 @@ namespace NetApp.Security
         //    UserPrincipal user = UserPrincipal.FindByIdentity(ctx, username.Trim());
         //    return user;
         //}
-        private sbyte[] ToSByteArray(byte[] byteArray)
+        protected sbyte[] ToSByteArray(byte[] byteArray)
         {
             var sbyteArray = new sbyte[byteArray.Length];
             for (var index = 0; index < byteArray.Length; index++)
@@ -2086,6 +2033,35 @@ namespace NetApp.Security
 
             //return sva;
             return (string[])attributes[key].GetValues(typeof(string));
+        }
+        protected ICollection<SearchResultEntry> PagedRequest(string distinguishedName, string filter, SearchScope searchScope, params string[] attributeList)
+        {
+            List<SearchResultEntry> result = new List<SearchResultEntry>();
+            var request = new SearchRequest(distinguishedName, filter, searchScope, attributeList);
+            using (var ldapConnection = GetConnection())
+            {
+                PageResultRequestControl prc = new PageResultRequestControl(_ldapSettings.PageSize);
+                request.Controls.Add(prc);
+                while (true)
+                {
+                    SearchResponse response = ldapConnection.SendRequest(request) as SearchResponse;
+                    foreach (DirectoryControl control in response.Controls)
+                    {
+                        if (control is PageResultResponseControl)
+                        {
+                            prc.Cookie = ((PageResultResponseControl)control).Cookie;
+                            break;
+                        }
+                    }
+                    foreach (SearchResultEntry sre in response.Entries)
+                    {
+                        result.Add(sre);
+                    }
+                    if (prc.Cookie.Length == 0)
+                        break;
+                }
+            }
+            return result;
         }
     }
 }
