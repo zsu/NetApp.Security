@@ -25,11 +25,13 @@ namespace NetApp.Security
 
         protected readonly string[] _attributes =
         {
-   "objectSid", "objectGUID", "objectCategory", "objectClass", "memberOf", "name", "cn", "distinguishedName",
-   "sAMAccountName", "userPrincipalName", "displayName", "givenName", "sn", "description",
-   "telephoneNumber", "mail", "streetAddress", "postalCode", "l", "st", "co", "c",
-   "department","division","manager","title","userAccountControl","employeeID","initials"
-  };
+            LdapAttributes.ObjectSid,LdapAttributes.ObjectGuid,LdapAttributes.ObjectCategory,LdapAttributes.ObjectClass,LdapAttributes.MemberOf,
+            LdapAttributes.Name,LdapAttributes.Cn,LdapAttributes.DistinguishedName,LdapAttributes.SAmAccountName,LdapAttributes.UserPrincipalName,
+            LdapAttributes.DisplayName,LdapAttributes.GivenName,LdapAttributes.Sn,LdapAttributes.Description,LdapAttributes.TelephoneNumber,
+            LdapAttributes.Mail,LdapAttributes.StreetAddress,LdapAttributes.PostalCode,LdapAttributes.City,LdapAttributes.State,LdapAttributes.Country,
+            LdapAttributes.CountryCode,LdapAttributes.Department,LdapAttributes.Division,LdapAttributes.Manager,LdapAttributes.Title,LdapAttributes.UserAccountControl,
+            LdapAttributes.EmployeeId,LdapAttributes.Initials
+        };
         public LdapService(IOptions<LdapSettings> options)
         {
             this._ldapSettings = options.Value;
@@ -794,86 +796,86 @@ namespace NetApp.Security
             //          ldapConnection.Add(newEntry);
             //      }
             AddRequest request = new AddRequest(dn);
-            request.Attributes.Add(new DirectoryAttribute("instanceType", "4"));
-            request.Attributes.Add(new DirectoryAttribute("objectCategory", $"CN=Person,CN=Schema,CN=Configuration,{this._ldapSettings.DomainDistinguishedName}"));
-            request.Attributes.Add(new DirectoryAttribute("objectClass", new[] { "top", "person", "organizationalPerson", "user" }));
-            request.Attributes.Add(new DirectoryAttribute("name", user.FullName));
-            request.Attributes.Add(new DirectoryAttribute("cn", $"{user.FullName}"));
-            request.Attributes.Add(new DirectoryAttribute("sAMAccountName", user.UserName?.Trim().ToLower()));
-            request.Attributes.Add(new DirectoryAttribute("userPrincipalName", $"{user.UserName.Trim().ToLower()}@{this._ldapSettings.DomainName?.Trim()}"));
-            request.Attributes.Add(new DirectoryAttribute("unicodePwd", Encoding.Unicode.GetBytes($"\"{user.Password?.Trim()}\"")));
-            request.Attributes.Add(new DirectoryAttribute("userAccountControl", user.MustChangePasswordOnNextLogon ? "544" : "512"));
-            request.Attributes.Add(new DirectoryAttribute("givenName", user.FirstName?.Trim()));
-            request.Attributes.Add(new DirectoryAttribute("sn", user.LastName?.Trim()));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.InstanceType, "4"));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.ObjectCategory, $"CN=Person,CN=Schema,CN=Configuration,{this._ldapSettings.DomainDistinguishedName}"));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.ObjectClass, new[] { "top", "person", "organizationalPerson", "user" }));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Name, user.FullName));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Cn, $"{user.FullName}"));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.SAmAccountName, user.UserName?.Trim().ToLower()));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.UserPrincipalName, $"{user.UserName.Trim().ToLower()}@{this._ldapSettings.DomainName?.Trim()}"));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.UnicodePwd, Encoding.Unicode.GetBytes($"\"{user.Password?.Trim()}\"")));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.UserAccountControl, user.MustChangePasswordOnNextLogon ? "544" : "512"));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.GivenName, user.FirstName?.Trim()));
+            request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Sn, user.LastName?.Trim()));
 
             if (!string.IsNullOrWhiteSpace(user.EmailAddress))
             {
-                request.Attributes.Add(new DirectoryAttribute("mail", user.EmailAddress.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Mail, user.EmailAddress.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.DisplayName))
             {
-                request.Attributes.Add(new DirectoryAttribute("displayName", user.DisplayName.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.DisplayName, user.DisplayName.Trim()));
             }
             else
-                request.Attributes.Add(new DirectoryAttribute("displayName", user.FullName));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.DisplayName, user.FullName));
             if (!string.IsNullOrWhiteSpace(user.MiddleName))
             {
-                request.Attributes.Add(new DirectoryAttribute("initials", user.MiddleName.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Initials, user.MiddleName.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.Description))
             {
-                request.Attributes.Add(new DirectoryAttribute("description", user.Description.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Description, user.Description.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.Phone))
             {
-                request.Attributes.Add(new DirectoryAttribute("telephoneNumber", user.Phone.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.TelephoneNumber, user.Phone.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.Address?.Street))
             {
-                request.Attributes.Add(new DirectoryAttribute("streetAddress", user.Address.Street.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.StreetAddress, user.Address.Street.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.Address?.City))
             {
-                request.Attributes.Add(new DirectoryAttribute("l", user.Address.City.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.City, user.Address.City.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.Address?.PostalCode))
             {
-                request.Attributes.Add(new DirectoryAttribute("postalCode", user.Address.PostalCode.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.PostalCode, user.Address.PostalCode.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.Address?.StateName))
             {
-                request.Attributes.Add(new DirectoryAttribute("st", user.Address.StateName.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.State, user.Address.StateName.Trim()));
             }
             if (user.Address?.CountryName != null)
             {
-                request.Attributes.Add(new DirectoryAttribute("co", user.Address.CountryName));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Country, user.Address.CountryName));
             }
             if (!string.IsNullOrWhiteSpace(user.Address?.CountryCode))
             {
-                request.Attributes.Add(new DirectoryAttribute("c", user.Address.CountryCode.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.CountryCode, user.Address.CountryCode.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.EmployeeId))
             {
-                request.Attributes.Add(new DirectoryAttribute("employeeID", user.EmployeeId.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.EmployeeId, user.EmployeeId.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.Division))
             {
-                request.Attributes.Add(new DirectoryAttribute("division", user.Division.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Division, user.Division.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.Department))
             {
-                request.Attributes.Add(new DirectoryAttribute("department", user.Department.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Department, user.Department.Trim()));
             }
             if (!string.IsNullOrWhiteSpace(user.Manager))
             {
                 var manager = GetUserByLogonName(user.Manager.Trim());
                 if (manager == null)
                     throw new Exception($"Invalid manager {user.Manager}.");
-                request.Attributes.Add(new DirectoryAttribute("manager", manager.DistinguishedName));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Manager, manager.DistinguishedName));
             }
             if (!string.IsNullOrWhiteSpace(user.Title))
             {
-                request.Attributes.Add(new DirectoryAttribute("title", user.Title.Trim()));
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Title, user.Title.Trim()));
             }
             using (var ldapConnection = this.GetConnection())
             {
@@ -1294,42 +1296,42 @@ namespace NetApp.Security
         {
             var ldapUser = new LdapUser
             {
-                ObjectSid = GetStringAttribute(attributes, "objectSid"),
-                ObjectGuid = ConvertToGuidString(GetByteAttribute(attributes, "objectGUID")),
-                ObjectCategory = GetStringAttribute(attributes, "objectCategory"),
-                ObjectClass = GetStringAttribute(attributes, "objectClass"),
-                IsDomainAdmin = GetStringArrayAttribute(attributes, "memberOf") != null ? GetStringArrayAttribute(attributes, "memberOf").Contains("CN=Domain Admins," + this._ldapSettings.SearchBase) : false,
-                MemberOf = GetStringArrayAttribute(attributes, "memberOf"),
-                CommonName = GetStringAttribute(attributes, "cn"),
-                UserName = GetStringAttribute(attributes, "name"),
-                SamAccountName = GetStringAttribute(attributes, "sAMAccountName"),
-                UserPrincipalName = GetStringAttribute(attributes, "userPrincipalName"),
-                Name = GetStringAttribute(attributes, "name"),
-                DistinguishedName = GetStringAttribute(attributes, "distinguishedName"),
-                DisplayName = GetStringAttribute(attributes, "displayName"),
-                FirstName = GetStringAttribute(attributes, "givenName"),
-                LastName = GetStringAttribute(attributes, "sn"),
-                Description = GetStringAttribute(attributes, "description"),
-                Phone = GetStringAttribute(attributes, "telephoneNumber"),
-                EmailAddress = GetStringAttribute(attributes, "mail"),
+                ObjectSid = GetStringAttribute(attributes, LdapAttributes.ObjectSid),
+                ObjectGuid = ConvertToGuidString(GetByteAttribute(attributes, LdapAttributes.ObjectGuid)),
+                ObjectCategory = GetStringAttribute(attributes, LdapAttributes.ObjectCategory),
+                ObjectClass = GetStringAttribute(attributes, LdapAttributes.ObjectClass),
+                IsDomainAdmin = GetStringArrayAttribute(attributes, LdapAttributes.MemberOf) != null ? GetStringArrayAttribute(attributes, LdapAttributes.MemberOf).Contains("CN=Domain Admins,") : false,
+                MemberOf = GetStringArrayAttribute(attributes, LdapAttributes.MemberOf),
+                CommonName = GetStringAttribute(attributes, LdapAttributes.Cn),
+                UserName = GetStringAttribute(attributes, LdapAttributes.Name),
+                SamAccountName = GetStringAttribute(attributes, LdapAttributes.SAmAccountName),
+                UserPrincipalName = GetStringAttribute(attributes, LdapAttributes.UserPrincipalName),
+                Name = GetStringAttribute(attributes, LdapAttributes.Name),
+                DistinguishedName = GetStringAttribute(attributes, LdapAttributes.DistinguishedName),
+                DisplayName = GetStringAttribute(attributes, LdapAttributes.DisplayName),
+                FirstName = GetStringAttribute(attributes, LdapAttributes.GivenName),
+                LastName = GetStringAttribute(attributes, LdapAttributes.Sn),
+                Description = GetStringAttribute(attributes, LdapAttributes.Description),
+                Phone = GetStringAttribute(attributes, LdapAttributes.TelephoneNumber),
+                EmailAddress = GetStringAttribute(attributes, LdapAttributes.Mail),
                 Address = new LdapAddress
                 {
-                    Street = GetStringAttribute(attributes, "streetAddress"),
-                    City = GetStringAttribute(attributes, "l"),
-                    PostalCode = GetStringAttribute(attributes, "postalCode"),
-                    StateName = GetStringAttribute(attributes, "st"),
-                    CountryName = GetStringAttribute(attributes, "co"),
-                    CountryCode = GetStringAttribute(attributes, "c")
+                    Street = GetStringAttribute(attributes, LdapAttributes.StreetAddress),
+                    City = GetStringAttribute(attributes, LdapAttributes.City),
+                    PostalCode = GetStringAttribute(attributes, LdapAttributes.PostalCode),
+                    StateName = GetStringAttribute(attributes, LdapAttributes.State),
+                    CountryName = GetStringAttribute(attributes, LdapAttributes.Country),
+                    CountryCode = GetStringAttribute(attributes, LdapAttributes.CountryCode)
                 },
 
-                SamAccountType = int.Parse(GetStringAttribute(attributes, "sAMAccountType") ?? "0"),
-                MiddleName = GetStringAttribute(attributes, "initials"),
-                EmployeeId = GetStringAttribute(attributes, "employeeID"),
-                Title = GetStringAttribute(attributes, "title"),
-                Division = GetStringAttribute(attributes, "division"),
-                Department = GetStringAttribute(attributes, "department"),
-                Manager = GetStringAttribute(attributes, "manager"),
-                AccountFlag = GetStringAttribute(attributes, "userAccountControl")
+                SamAccountType = int.Parse(GetStringAttribute(attributes, LdapAttributes.SAMAccountType) ?? "0"),
+                MiddleName = GetStringAttribute(attributes, LdapAttributes.Initials),
+                EmployeeId = GetStringAttribute(attributes, LdapAttributes.EmployeeId),
+                Title = GetStringAttribute(attributes, LdapAttributes.Title),
+                Division = GetStringAttribute(attributes, LdapAttributes.Division),
+                Department = GetStringAttribute(attributes, LdapAttributes.Department),
+                Manager = GetStringAttribute(attributes, LdapAttributes.Manager),
+                AccountFlag = GetStringAttribute(attributes, LdapAttributes.UserAccountControl)
             };
 
             return ldapUser;
@@ -1354,15 +1356,15 @@ namespace NetApp.Security
         {
             return new LdapEntry
             {
-                ObjectSid = GetStringAttribute(attributes, "objectSid"),
-                ObjectGuid = ConvertToGuidString(GetByteAttribute(attributes, "objectGUID")),
-                ObjectCategory = GetStringAttribute(attributes, "objectCategory"),
-                ObjectClass = GetStringAttribute(attributes, "objectClass"),
-                CommonName = GetStringAttribute(attributes, "cn"),
-                Name = GetStringAttribute(attributes, "name"),
-                DistinguishedName = GetStringAttribute(attributes, "distinguishedName"),
-                SamAccountName = GetStringAttribute(attributes, "sAMAccountName"),
-                SamAccountType = int.Parse(GetStringAttribute(attributes, "sAMAccountType") ?? "0"),
+                ObjectSid = GetStringAttribute(attributes, LdapAttributes.ObjectSid),
+                ObjectGuid = ConvertToGuidString(GetByteAttribute(attributes, LdapAttributes.ObjectGuid)),
+                ObjectCategory = GetStringAttribute(attributes, LdapAttributes.ObjectCategory),
+                ObjectClass = GetStringAttribute(attributes, LdapAttributes.ObjectClass),
+                CommonName = GetStringAttribute(attributes, LdapAttributes.Cn),
+                Name = GetStringAttribute(attributes, LdapAttributes.Name),
+                DistinguishedName = GetStringAttribute(attributes, LdapAttributes.DistinguishedName),
+                SamAccountName = GetStringAttribute(attributes, LdapAttributes.SAmAccountName),
+                SamAccountType = int.Parse(GetStringAttribute(attributes, LdapAttributes.SAMAccountType) ?? "0"),
             };
         }
         //private SecurityIdentifier GetDomainSid()

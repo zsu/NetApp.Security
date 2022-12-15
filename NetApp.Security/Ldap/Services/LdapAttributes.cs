@@ -46,8 +46,17 @@
         public const string Division = "division";
         public const string JpegPhoto = "jpegPhoto";
         public const string ThumbnailPhoto = "thumbnailPhoto";
-
-        //group
         public const string Description = "description";
+        public const string StreetAddress = "streetAddress";
+        public const string PostalCode = "postalCode";
+        public const string City = "l";
+        public const string State = "st";
+        public const string Country = "co";
+        public const string CountryCode = "c";
+        public const string EmployeeId = "employeeID";
+        public const string Initials = "initials";
+        public const string InstanceType = "instanceType";
+        public const string UnicodePwd = "unicodePwd";
+        public const string SAMAccountType = "sAMAccountType";
     }
 }

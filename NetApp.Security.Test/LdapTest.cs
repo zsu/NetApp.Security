@@ -9,6 +9,10 @@ namespace NetApp.Security.Test
         private ILdapService _ldapService;
         private LdapSettings _ldapSettings;
         private string _username = "dev1test";
+        private string _ou = "ou1";
+        private string _newou = "newou";
+        private string _group1 = "group1";
+        private string _group2 = "group2";
         //private Mock<ILdapService> _ldapServiceMock;
         public LdapTest()
         {
@@ -38,7 +42,7 @@ namespace NetApp.Security.Test
         [TestMethod]
         public void DeleteAndCreateUser()
         {
-            string ou = $"OU=ou1,{_ldapSettings.DomainDistinguishedName}";
+            string ou = $"OU={_ou},{_ldapSettings.DomainDistinguishedName}";
             _ldapService.Delete(_username);
             Assert.IsNull(_ldapService.GetUserByLogonName(_username));
             var item = new LdapUser();
@@ -64,9 +68,9 @@ namespace NetApp.Security.Test
         public void ChangeOU()
         {
             var user = _ldapService.GetUserByLogonName(_username);
-            string oldOU = $"OU=ou1,{_ldapSettings.DomainDistinguishedName}";
-            string oldParentOU = "ou1";
-            string newParentOU = "newou";
+            string oldOU = $"OU={_ou},{_ldapSettings.DomainDistinguishedName}";
+            string oldParentOU = _ou;
+            string newParentOU = _newou;
             string newOU = $"OU={newParentOU},{oldOU}";
             _ldapService.ChangeOU(_username, newOU);
             Assert.IsTrue(_ldapService.GetParentOU(_username) == newParentOU);
@@ -82,7 +86,7 @@ namespace NetApp.Security.Test
         [TestMethod]
         public void AddUserToGroup()
         {
-            var group = new List<string> { "group1", "group2" };
+            var group = new List<string> { _group1, _group2 };
             _ldapService.RemoveFromGroups(_username, group);
             _ldapService.AddToGroups(_username, group);
             Assert.IsTrue(_ldapService.IsUserInGroup(_username, group));
@@ -91,7 +95,7 @@ namespace NetApp.Security.Test
         [TestMethod]
         public void RemoveFromGroup()
         {
-            var group = new List<string> { "group1", "group2" };
+            var group = new List<string> { _group1, _group2 };
             _ldapService.AddToGroups(_username, group);
             _ldapService.RemoveFromGroups(_username, group);
             Assert.IsFalse(_ldapService.IsUserInGroup(_username, group));
@@ -99,14 +103,14 @@ namespace NetApp.Security.Test
         [TestMethod]
         public void SetUserAttribute()
         {
-            var attributes = new List<KeyValuePair<string,string>> { new KeyValuePair<string, string>("mobile","111-111-1111"),new KeyValuePair<string, string>("division","test") };
-            var oldAttributes = new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("mobile", null), new KeyValuePair<string, string>("division", null) };
+            var attributes = new List<KeyValuePair<string,string>> { new KeyValuePair<string, string>(LdapAttributes.Mobile,"111-111-1111"),new KeyValuePair<string, string>(LdapAttributes.Division, "test") };
+            var oldAttributes = new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>(LdapAttributes.Mobile, null), new KeyValuePair<string, string>(LdapAttributes.Division, null) };
             _ldapService.SetUserAttributes(_username, attributes);
-            Assert.IsTrue(_ldapService.GetUserAttribute(_username, "mobile")=="111-111-1111");
-            Assert.IsTrue(_ldapService.GetUserAttribute(_username, "division") == "test");
+            Assert.IsTrue(_ldapService.GetUserAttribute(_username, LdapAttributes.Mobile) =="111-111-1111");
+            Assert.IsTrue(_ldapService.GetUserAttribute(_username, LdapAttributes.Division) == "test");
             _ldapService.SetUserAttributes(_username, oldAttributes);
-            Assert.IsTrue(_ldapService.GetUserAttribute(_username, "mobile") == null);
-            Assert.IsTrue(_ldapService.GetUserAttribute(_username, "division") == null);
+            Assert.IsTrue(_ldapService.GetUserAttribute(_username, LdapAttributes.Mobile) == null);
+            Assert.IsTrue(_ldapService.GetUserAttribute(_username, LdapAttributes.Division) == null);
         }
         [TestMethod]
         public void DisableAccount()
@@ -139,7 +143,7 @@ namespace NetApp.Security.Test
         public void SetManager()
         {
             string managername = "dev2test";
-            string ou = $"OU=ou1,{_ldapSettings.DomainDistinguishedName}";
+            string ou = $"OU={_ou},{_ldapSettings.DomainDistinguishedName}";
             _ldapService.Delete(managername);
             Assert.IsNull(_ldapService.GetUserByLogonName(managername));
             var item = new LdapUser();
