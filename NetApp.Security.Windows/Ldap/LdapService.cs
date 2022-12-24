@@ -129,7 +129,100 @@ namespace NetApp.Security.Windows
 
             using (var ldapConnection = this.GetConnection())
             {
-                var result = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, filter, SearchScope.Subtree, _attributes);
+                //var search = ldapConnection.Search(
+                //searchBase ??= this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes,
+                //false,
+                //null,
+                //null);
+
+                //LdapMessage message;
+
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
+
+                //    var entry = searchResultMessage.Entry;
+
+                //    if (objectClass == "group")
+                //    {
+                //        allChildren.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //        //if (recursive)
+                //        //{
+                //        //    foreach (var child in this.GetChildren(string.Empty, entry.Dn, objectCategory, objectClass, recursive))
+                //        //    {
+                //        //        allChildren.Add(child);
+                //        //    }
+                //        //}
+                //    }
+
+                //    if (objectClass == "user")
+                //    {
+                //        allChildren.Add(this.CreateUserFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //    }
+                //}
+
+                //        var searchOptions = new SearchOptions(
+                //string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes);
+                //        var data = ldapConnection.SearchUsingSimplePaging(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            foreach (var entry in data)
+                //            {
+                //                if (objectClass == "group")
+                //                {
+                //                    allChildren.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //                    if (recursive)
+                //                    {
+                //                        foreach (var child in this.GetChildren(searchBase, entry.Dn, objectCategory, objectClass, recursive))
+                //                        {
+                //                            allChildren.Add(child);
+                //                        }
+                //                    }
+                //                }
+
+                //                if (objectClass == "user")
+                //                {
+                //                    allChildren.Add(this.CreateUserFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //                }
+                //            }
+                //        }
+                //    }
+
+                //var req = new SearchRequest(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, filter, SearchScope.Subtree, _attributes);
+                //var resp = (SearchResponse)ldapConnection.SendRequest(req);
+                //if (resp != null && resp.ResultCode == ResultCode.Success && resp.Entries?.Count > 0)
+                //{
+
+                //    foreach (SearchResultEntry entry in resp.Entries)
+                //    {
+                //        if (objectClass == "group")
+                //        {
+                //            allChildren.Add(this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes));
+                //            if (recursive)
+                //            {
+                //                foreach (var child in this.GetChildren(searchBase, entry.DistinguishedName, objectCategory, objectClass, recursive))
+                //                {
+                //                    allChildren.Add(child);
+                //                }
+                //            }
+                //        }
+                //        if (objectClass == "user")
+                //            allChildren.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
+                //    }
+                //}
+                var result = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, filter, SearchScope.Subtree, _attributes);
                 foreach (SearchResultEntry entry in result)
                 {
                     if (objectClass == "group")
@@ -185,6 +278,76 @@ namespace NetApp.Security.Windows
 
             using (var ldapConnection = this.GetConnection())
             {
+                //var search = ldapConnection.Search(
+                //searchBase ??= this._searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes,
+                //false,
+                //null,
+                //null);
+
+                //LdapMessage message;
+
+                //while ((message = search.getResponse()) != null)
+                //{
+                //    if (!(message is LdapSearchResult searchResultMessage))
+                //    {
+                //        continue;
+                //    }
+
+                //    var entry = searchResultMessage.Entry;
+
+                //    if (objectClass == "group")
+                //    {
+                //        allChildren.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //        //if (recursive)
+                //        //{
+                //        //    foreach (var child in this.GetParent(string.Empty, entry.Dn, objectCategory, objectClass, recursive))
+                //        //    {
+                //        //        allChildren.Add(child);
+                //        //    }
+                //        //}
+                //    }
+
+                //    if (objectClass == "user")
+                //    {
+                //        allChildren.Add(this.CreateUserFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //    }
+                //}
+
+                //        var searchOptions = new SearchOptions(
+                //string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase,
+                //LdapConnection.ScopeSub,
+                //filter,
+                //this._attributes);
+                //        var data = ldapConnection.SearchUsingSimplePaging(
+                //            searchOptions,
+                //            _ldapSettings.PageSize
+                //          );
+                //        if (data?.Count > 0)
+                //        {
+                //            foreach (var entry in data)
+                //            {
+                //                if (objectClass == "group")
+                //                {
+                //                    allChildren.Add(this.CreateEntryFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //                    //if (recursive)
+                //                    //{
+                //                    //    foreach (var child in this.GetParent(searchBase, entry.Dn, objectCategory, objectClass, recursive))
+                //                    //    {
+                //                    //        allChildren.Add(child);
+                //                    //    }
+                //                    //}
+                //                }
+
+                //                if (objectClass == "user")
+                //                {
+                //                    allChildren.Add(this.CreateUserFromAttributes(entry.Dn, entry.GetAttributeSet()));
+                //                }
+                //            }
+                //        }
+                //    }
                 var result = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, filter, SearchScope.Subtree, _attributes);
                 foreach (SearchResultEntry entry in result)
                 {
