@@ -16,7 +16,7 @@ namespace NetApp.Security.Test
         //private Mock<ILdapService> _ldapServiceMock;
         public LdapTest()
         {
-        }
+        }
         [TestInitialize]
         public void Setup()
         {
