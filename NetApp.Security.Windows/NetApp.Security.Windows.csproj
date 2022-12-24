@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Authors>Zhicheng Su</Authors>
-    <Version>5.0.0</Version>
+    <Version>4.2.0</Version>
     <Description>Ldap library for .Net</Description>
     <Copyright>Zhicheng Su</Copyright>
     <PackageTags>Security, Ldap, Active Directory, .Net</PackageTags>
@@ -15,7 +15,7 @@
 
   <ItemGroup>
     <PackageReference Include="System.DirectoryServices.Protocols" Version="7.0.0" />
-    <PackageReference Include="System.Drawing.Common" Version="7.0.0" />
+    <PackageReference Include="System.Drawing.Common" Version="6.0.0" />
   </ItemGroup>
 
   <ItemGroup>
