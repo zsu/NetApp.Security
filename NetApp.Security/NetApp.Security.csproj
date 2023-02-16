@@ -9,7 +9,7 @@
     <PackageTags>Security, Ldap, Active Directory, .Net</PackageTags>
     <AssemblyVersion></AssemblyVersion>
     <FileVersion></FileVersion>
-    <Version>7.1.0</Version>
+    <Version>7.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NetApp.Common" Version="3.0.0" />
+    <PackageReference Include="NetApp.Common" Version="3.1.0" />
     <PackageReference Include="System.DirectoryServices.Protocols" Version="7.0.0" />
   </ItemGroup>
 
