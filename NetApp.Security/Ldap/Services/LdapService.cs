@@ -29,7 +29,7 @@ namespace NetApp.Security
           LdapAttributes.DisplayName,LdapAttributes.GivenName,LdapAttributes.Sn,LdapAttributes.Description,LdapAttributes.TelephoneNumber,
           LdapAttributes.Mail,LdapAttributes.StreetAddress,LdapAttributes.PostalCode,LdapAttributes.City,LdapAttributes.State,LdapAttributes.Country,
           LdapAttributes.CountryCode,LdapAttributes.Department,LdapAttributes.Division,LdapAttributes.Manager,LdapAttributes.Title,LdapAttributes.UserAccountControl,
-          LdapAttributes.EmployeeId,LdapAttributes.Initials
+          LdapAttributes.EmployeeId,LdapAttributes.Initials,LdapAttributes.EmployeeType
         };
         public LdapService(IOptions<LdapSettings> options)
         {
@@ -461,6 +461,10 @@ namespace NetApp.Security
             {
                 request.Attributes.Add(new DirectoryAttribute(LdapAttributes.Title, user.Title.Trim()));
             }
+            if (!string.IsNullOrWhiteSpace(user.EmployeeType))
+            {
+                request.Attributes.Add(new DirectoryAttribute(LdapAttributes.EmployeeType, user.EmployeeType.Trim()));
+            }
             using (var ldapConnection = this.GetConnection())
             {
                 var response = ldapConnection.SendRequest(request);
@@ -695,7 +699,8 @@ namespace NetApp.Security
                 Division = GetStringAttribute(attributes, LdapAttributes.Division),
                 Department = GetStringAttribute(attributes, LdapAttributes.Department),
                 Manager = GetStringAttribute(attributes, LdapAttributes.Manager),
-                AccountFlag = GetStringAttribute(attributes, LdapAttributes.UserAccountControl)
+                AccountFlag = GetStringAttribute(attributes, LdapAttributes.UserAccountControl),
+                EmployeeType = GetStringAttribute(attributes, LdapAttributes.EmployeeType),
             };
 
             return ldapUser;
