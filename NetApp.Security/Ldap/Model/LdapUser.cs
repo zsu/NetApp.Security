@@ -109,6 +109,8 @@ namespace NetApp.Security
         [NotMapped]
         public string MiddleName { get; set; }
         [NotMapped]
+        public string EmployeeType { get; set; }
+        [NotMapped]
         public bool Disabled { get => (Convert.ToInt32(AccountFlag) & 2) > 0; }
     }
 
