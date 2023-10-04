@@ -9,7 +9,7 @@
     <PackageTags>Security, Ldap, Active Directory, .Net</PackageTags>
     <AssemblyVersion></AssemblyVersion>
     <FileVersion></FileVersion>
-    <Version>7.4.0</Version>
+    <Version>7.8.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
