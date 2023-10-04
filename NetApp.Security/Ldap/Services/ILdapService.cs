@@ -34,7 +34,7 @@ namespace NetApp.Security
         bool IsUserInGroup(string username, List<string> groups, bool checkNested = true);
         void AddToGroups(string username, List<string> groups);
         void RemoveFromGroups(string username, List<string> groups);
-        List<string> GetUserGroups(string username, bool recursive = true);
+        List<string> GetUserGroups(string username, bool recursive = true,string container=null);
         void SetUserAttributes(string username, List<KeyValuePair<string, string>> attributes);
         ICollection<LdapEntry> GetComputers(string name, string container = null);
         string GetParentOU(string username);
