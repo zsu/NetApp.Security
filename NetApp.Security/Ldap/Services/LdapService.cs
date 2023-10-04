@@ -990,40 +990,42 @@ namespace NetApp.Security
 
         //    return result;
         //}
-        public List<string> GetUserGroups(string username, bool recursive = true, string container = null)
+        public List<string> GetUserGroups(string username, bool recursive = true)
         {
-            if (string.IsNullOrWhiteSpace(username))
-                return null;
-            var distinguishedName = GetUserByLogonName(username)?.DistinguishedName;
-            if (string.IsNullOrWhiteSpace(distinguishedName))
-                throw new Exception($"Invalid user {username}.");
-            return GetParent<LdapEntry>(string.IsNullOrWhiteSpace(container) ? _searchBase : container, distinguishedName, recursive)?.Select(x=>x.Name).Distinct().ToList();
+            ICollection<ILdapEntry> groups = null;// new Collection<LdapEntry>();
+            if (!string.IsNullOrWhiteSpace(username))
+            {
+                var distinguishedName = GetUserByLogonName(username)?.DistinguishedName;
+                if (string.IsNullOrWhiteSpace(distinguishedName))
+                    throw new Exception($"Invalid user {username}.");
+                groups = GetParent(null, distinguishedName, "*", "group", recursive);
+            }
+            return groups?.Select(x => x.Name).Distinct().ToList();
+            //List<string> groups = null;
+            //if (!string.IsNullOrEmpty(username))
+            //{
+            //    var distinguishedName = GetUserByLogonName(username)?.DistinguishedName;
+            //    if (string.IsNullOrWhiteSpace(distinguishedName))
+            //        return null;
+            //    groups = new List<string>();
+            //    var getGroupsFilterForDn = recursive ? $"(&(objectCategory=group)(member:1.2.840.113556.1.4.1941:={distinguishedName}))" : $"(&(objectCategory=group)(member={distinguishedName}))";
+            //    using (DirectorySearcher dirSearch = new DirectorySearcher())
+            //    {
+            //        dirSearch.Filter = getGroupsFilterForDn;
+            //        dirSearch.PropertiesToLoad.Add("name");
 
-            //List<string> groups = null;
-            //if (!string.IsNullOrEmpty(username))
-            //{
-            //    var distinguishedName = GetUserByLogonName(username)?.DistinguishedName;
-            //    if (string.IsNullOrWhiteSpace(distinguishedName))
-            //        return null;
-            //    groups = new List<string>();
-            //    var getGroupsFilterForDn = recursive ? $"(&(objectCategory=group)(member:1.2.840.113556.1.4.1941:={distinguishedName}))" : $"(&(objectCategory=group)(member={distinguishedName}))";
-            //    using (DirectorySearcher dirSearch = new DirectorySearcher())
-            //    {
-            //        dirSearch.Filter = getGroupsFilterForDn;
-            //        dirSearch.PropertiesToLoad.Add("name");
-
-            //        using (var results = dirSearch.FindAll())
-            //        {
-            //            foreach (SearchResult result in results)
-            //            {
-            //                if (result.Properties.Contains("name"))
-            //                    groups.Add((string)result.Properties["name"][0]);
-            //            }
-            //        }
-            //    }
-            //}
-            //return groups;
-        }
+            //        using (var results = dirSearch.FindAll())
+            //        {
+            //            foreach (SearchResult result in results)
+            //            {
+            //                if (result.Properties.Contains("name"))
+            //                    groups.Add((string)result.Properties["name"][0]);
+            //            }
+            //        }
+            //    }
+            //}
+            //return groups;
+        }
         public void SetUserAttributes(string username, List<KeyValuePair<string, string>> attributes)
         {
             List<string> result = new List<string>();
