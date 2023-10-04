@@ -125,7 +125,7 @@ namespace NetApp.Security.Windows
 
             var filter = string.IsNullOrEmpty(groupDistinguishedName)
             ? $"(&(objectCategory={objectCategory})(objectClass={objectClass}))"
-            : (recursive ? $"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf:1.2.840.113556.1.4.1941:={LdapEncoder.FilterEncode(groupDistinguishedName)}))" : $"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf={LdapEncoder.FilterEncode(groupDistinguishedName)}))");
+            : (recursive ? $"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf:1.2.840.113556.1.4.1941:={groupDistinguishedName}))" : $"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf={groupDistinguishedName}))");
 
             using (var ldapConnection = this.GetConnection())
             {
@@ -181,7 +181,7 @@ namespace NetApp.Security.Windows
 
             var filter = string.IsNullOrEmpty(groupDistinguishedName)
             ? $"(&(objectCategory={objectCategory})(objectClass={objectClass}))"
-            : (recursive ? $"(&(objectCategory={objectCategory})(objectClass={objectClass})(member:1.2.840.113556.1.4.1941:={LdapEncoder.FilterEncode(groupDistinguishedName)}))" : $"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={LdapEncoder.FilterEncode(groupDistinguishedName)}))");
+            : (recursive ? $"(&(objectCategory={objectCategory})(objectClass={objectClass})(member:1.2.840.113556.1.4.1941:={groupDistinguishedName}))" : $"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={groupDistinguishedName}))");
 
             using (var ldapConnection = this.GetConnection())
             {

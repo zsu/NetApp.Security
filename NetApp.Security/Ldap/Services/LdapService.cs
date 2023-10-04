@@ -532,7 +532,7 @@ namespace NetApp.Security
             if (manager == null)
                 throw new Exception($"{managerUsername} cannot be found.");
 
-            var filter = $"(&(objectClass=user)(manager={LdapEncoder.FilterEncode(manager.DistinguishedName)}))";
+            var filter = $"(&(objectClass=user)(manager={manager.DistinguishedName}))";
 
             using (var ldapConnection = this.GetConnection())
             {
@@ -577,7 +577,7 @@ namespace NetApp.Security
             var allChildren = new Collection<ILdapEntry>();
             var filter = string.IsNullOrEmpty(groupDistinguishedName)
             ? $"(&(objectCategory={objectCategory})(objectClass={objectClass}))"
-            : ($"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf={LdapEncoder.FilterEncode(groupDistinguishedName)}))");
+            : ($"(&(objectCategory={objectCategory})(objectClass={objectClass})(memberOf={groupDistinguishedName}))");
 
             using (var ldapConnection = this.GetConnection())
             {
@@ -636,7 +636,7 @@ namespace NetApp.Security
 
             var filter = string.IsNullOrEmpty(groupDistinguishedName)
             ? $"(&(objectCategory={objectCategory})(objectClass={objectClass}))"
-            : ($"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={LdapEncoder.FilterEncode(groupDistinguishedName)}))");
+            : ($"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={groupDistinguishedName}))");
             using (var ldapConnection = this.GetConnection())
             {
                 var result = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, filter, SearchScope.Subtree, _attributes);
@@ -990,7 +990,7 @@ namespace NetApp.Security
 
         //    return result;
         //}
-        public List<string> GetUserGroups(string username, bool recursive = true)
+        public List<string> GetUserGroups(string username, bool recursive = true, string container = null)
         {
             ICollection<ILdapEntry> groups = null;// new Collection<LdapEntry>();
             if (!string.IsNullOrWhiteSpace(username))
@@ -998,7 +998,7 @@ namespace NetApp.Security
                 var distinguishedName = GetUserByLogonName(username)?.DistinguishedName;
                 if (string.IsNullOrWhiteSpace(distinguishedName))
                     throw new Exception($"Invalid user {username}.");
-                groups = GetParent(null, distinguishedName, "*", "group", recursive);
+                groups = GetParent(container, distinguishedName, "*", "group", recursive);
             }
             return groups?.Select(x => x.Name).Distinct().ToList();
             //List<string> groups = null;
