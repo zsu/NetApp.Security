@@ -142,7 +142,7 @@ namespace NetApp.Security.Windows
             }
             return allChildren;
         }
-        protected override ICollection<T> GetParent<T>(string searchBase, string? groupDistinguishedName = null, bool recursive = true)
+        protected override ICollection<T> GetParent<T>(string searchBase, string? distinguishedName = null, bool recursive = true)
         {
             var entries = new Collection<T>();
 
@@ -154,7 +154,7 @@ namespace NetApp.Security.Windows
                 objectClass = "group";
                 objectCategory = "group";
 
-                entries = this.GetParent(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, groupDistinguishedName, objectCategory, objectClass, recursive)
+                entries = this.GetParent(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, distinguishedName, objectCategory, objectClass, recursive)
                 .Cast<T>().ToCollection();
 
             }
@@ -164,7 +164,7 @@ namespace NetApp.Security.Windows
                 objectCategory = "person";
                 objectClass = "user";
 
-                entries = this.GetParent(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, groupDistinguishedName, objectCategory, objectClass, recursive).Cast<T>()
+                entries = this.GetParent(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, distinguishedName, objectCategory, objectClass, recursive).Cast<T>()
                 .ToCollection();
 
             }
@@ -172,16 +172,16 @@ namespace NetApp.Security.Windows
             return entries;
         }
 
-        protected override ICollection<ILdapEntry> GetParent(string searchBase, string? groupDistinguishedName = null,
+        protected override ICollection<ILdapEntry> GetParent(string searchBase, string? distinguishedName = null,
         string objectCategory = "*", string objectClass = "*", bool recursive = true)
         {
             if (!recursive)
-                return base.GetParent(searchBase, groupDistinguishedName, objectCategory, objectClass, recursive);
+                return base.GetParent(searchBase, distinguishedName, objectCategory, objectClass, recursive);
             var allChildren = new HashSet<ILdapEntry>();
 
-            var filter = string.IsNullOrEmpty(groupDistinguishedName)
+            var filter = string.IsNullOrEmpty(distinguishedName)
             ? $"(&(objectCategory={objectCategory})(objectClass={objectClass}))"
-            : (recursive ? $"(&(objectCategory={objectCategory})(objectClass={objectClass})(member:1.2.840.113556.1.4.1941:={groupDistinguishedName}))" : $"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={groupDistinguishedName}))");
+            : (recursive ? $"(&(objectCategory={objectCategory})(objectClass={objectClass})(member:1.2.840.113556.1.4.1941:={distinguishedName}))" : $"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={distinguishedName}))");
 
             using (var ldapConnection = this.GetConnection())
             {

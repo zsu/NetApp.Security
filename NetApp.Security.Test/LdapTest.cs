@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using NetApp.Common;
 
 namespace NetApp.Security.Test
 {
@@ -8,6 +9,7 @@ namespace NetApp.Security.Test
         private IConfiguration _configuration;
         private ILdapService _ldapService;
         private LdapSettings _ldapSettings;
+        private IEncryptionService _encryptionService;
         private string _username = "dev1test";
         private string _ou = "ou1";
         private string _newou = "newou";
@@ -22,6 +24,7 @@ namespace NetApp.Security.Test
         {
             _ldapSettings = new LdapSettings();
             _ldapService = new LdapService(_ldapSettings);
+            ////_encryptionService = new EncryptionService();
             //_ldapServiceMock = new Mock<ILdapService>();
             //_ldapServiceMock.Setup(x => x.AddUser(null, null));
             //_ldapServiceMock.Setup(x => x.AddToGroups(null, null));
@@ -159,6 +162,19 @@ namespace NetApp.Security.Test
             var manager = _ldapService.GetUserByLogonName(managername);
             Assert.IsTrue(user.Manager == manager.DistinguishedName);
             _ldapService.Delete(managername);
+        }
+        [TestMethod]
+        public void GetUserGroups()
+        {
+            var groupsRecursive1 = _ldapService.GetUserGroups(_username);
+            var groups1 = _ldapService.GetUserGroups(_username, false);
+            Assert.IsTrue(groups1?.Count > 0);
+            Assert.IsTrue(groupsRecursive1?.Count>=groups1?.Count);
+            var ldapService = new NetApp.Security.LdapService(_ldapSettings,_encryptionService);
+            var groupsRecursive2 = ldapService.GetUserGroups(_username);
+            var groups2 = ldapService.GetUserGroups(_username, false);
+            Assert.IsTrue(groupsRecursive1?.Count == groupsRecursive2?.Count);
+            Assert.IsTrue(groups1?.Count == groups2?.Count);
         }
     }
 }
