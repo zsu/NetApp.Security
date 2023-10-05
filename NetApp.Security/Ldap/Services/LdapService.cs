@@ -601,7 +601,7 @@ namespace NetApp.Security
             }
             return allChildren;
         }
-        protected virtual ICollection<T> GetParent<T>(string searchBase, string groupDistinguishedName = null, bool recursive = true) where T : ILdapEntry, new()
+        protected virtual ICollection<T> GetParent<T>(string searchBase, string distinguishedName = null, bool recursive = true) where T : ILdapEntry, new()
         {
             var entries = new Collection<T>();
 
@@ -612,7 +612,7 @@ namespace NetApp.Security
             {
                 objectClass = "group";
                 objectCategory = "group";
-                entries = this.GetParent(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, groupDistinguishedName, objectCategory, objectClass, recursive)
+                entries = this.GetParent(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, distinguishedName, objectCategory, objectClass, recursive)
                 .Cast<T>().ToCollection();
             }
 
@@ -621,7 +621,7 @@ namespace NetApp.Security
                 objectCategory = "person";
                 objectClass = "user";
 
-                entries = this.GetParent(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, groupDistinguishedName, objectCategory, objectClass, recursive).Cast<T>()
+                entries = this.GetParent(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, distinguishedName, objectCategory, objectClass, recursive).Cast<T>()
                 .ToCollection();
 
             }
@@ -629,14 +629,14 @@ namespace NetApp.Security
             return entries;
         }
 
-        protected virtual ICollection<ILdapEntry> GetParent(string searchBase, string groupDistinguishedName = null,
+        protected virtual ICollection<ILdapEntry> GetParent(string searchBase, string distinguishedName = null,
         string objectCategory = "*", string objectClass = "*", bool recursive = true)
         {
             var allChildren = new Collection<ILdapEntry>();
 
-            var filter = string.IsNullOrEmpty(groupDistinguishedName)
+            var filter = string.IsNullOrEmpty(distinguishedName)
             ? $"(&(objectCategory={objectCategory})(objectClass={objectClass}))"
-            : ($"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={groupDistinguishedName}))");
+            : ($"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={distinguishedName}))");
             using (var ldapConnection = this.GetConnection())
             {
                 var result = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, filter, SearchScope.Subtree, _attributes);
