@@ -727,99 +727,99 @@ namespace NetApp.Security
         //    return administratorSId.AccountDomainSid;
         //}
 
-        private IEnumerable<string> GetGroupsForUser(string username)
-        {
-            //var items = _cache?.Get<Dictionary<string, HashSet<string>>>(CacheKeyADGroups);
-            //var item = items?[userName];
-            //if (item != null)
-            //    return item;
-            //else
-            //{
-            var groups = new Stack<string>();
-            var uniqueGroups = new HashSet<string>();
+        //private IEnumerable<string> GetGroupsForUser(string username)
+        //{
+        //    //var items = _cache?.Get<Dictionary<string, HashSet<string>>>(CacheKeyADGroups);
+        //    //var item = items?[userName];
+        //    //if (item != null)
+        //    //    return item;
+        //    //else
+        //    //{
+        //    var groups = new Stack<string>();
+        //    var uniqueGroups = new HashSet<string>();
 
-            foreach (string group in this.GetGroupsForUserCore(username))
-                uniqueGroups.Add(group);
+        //    foreach (string group in this.GetGroupsForUserCore(username))
+        //        uniqueGroups.Add(group);
 
-            //if (items == null)
-            //{
-            //    items = new Dictionary<string, HashSet<string>>();
-            //    items.Add(userName, uniqueGroups);
-            //    _cache?.Set(CacheKeyADGroups, items);
-            //}
-            //else
-            //{
-            //    items.Add(userName, uniqueGroups);
-            //}
-            return uniqueGroups;
-        }
-        /// <summary>
-        /// Get nested groups membership for user
-        /// </summary>
-        /// <param name="username"></param>
-         /// <returns></returns>
-        private IEnumerable<string> GetNestedGroupsForUser(string username)
-        {
-            //var items = _cache?.Get<Dictionary<string, HashSet<string>>>(CacheKeyADGroups);
-            //var item = items?[username];
-            //if (item != null)
-            //    return item;
-            //else
-            //{
-            Dictionary<string, HashSet<string>> items = null;
-            var groups = new Stack<string>();
-            var uniqueGroups = new HashSet<string>();
+        //    //if (items == null)
+        //    //{
+        //    //    items = new Dictionary<string, HashSet<string>>();
+        //    //    items.Add(userName, uniqueGroups);
+        //    //    _cache?.Set(CacheKeyADGroups, items);
+        //    //}
+        //    //else
+        //    //{
+        //    //    items.Add(userName, uniqueGroups);
+        //    //}
+        //    return uniqueGroups;
+        //}
+        ///// <summary>
+        ///// Get nested groups membership for user
+        ///// </summary>
+        ///// <param name="username"></param>
+        // /// <returns></returns>
+        //private IEnumerable<string> GetNestedGroupsForUser(string username)
+        //{
+        //    //var items = _cache?.Get<Dictionary<string, HashSet<string>>>(CacheKeyADGroups);
+        //    //var item = items?[username];
+        //    //if (item != null)
+        //    //    return item;
+        //    //else
+        //    //{
+        //    Dictionary<string, HashSet<string>> items = null;
+        //    var groups = new Stack<string>();
+        //    var uniqueGroups = new HashSet<string>();
 
-            foreach (string group in this.GetGroupsForUserCore(username))
-                groups.Push(group);
+        //    foreach (string group in this.GetGroupsForUserCore(username))
+        //        groups.Push(group);
 
-            while (groups.Count > 0)
-            {
-                string group = groups.Pop();
-                uniqueGroups.Add(group);
+        //    while (groups.Count > 0)
+        //    {
+        //        string group = groups.Pop();
+        //        uniqueGroups.Add(group);
 
-                foreach (string parentGroup in this.GetGroupsForUserCore(group))
-                    groups.Push(parentGroup);
-            }
-            if (items == null)
-            {
-                items = new Dictionary<string, HashSet<string>>();
-                items.Add(username, uniqueGroups);
-                //_cache?.Set(CacheKeyADGroups, items);
-            }
-            else
-            {
-                items.Add(username, uniqueGroups);
-            }
-            return uniqueGroups;
-            //}
-        }
+        //        foreach (string parentGroup in this.GetGroupsForUserCore(group))
+        //            groups.Push(parentGroup);
+        //    }
+        //    if (items == null)
+        //    {
+        //        items = new Dictionary<string, HashSet<string>>();
+        //        items.Add(username, uniqueGroups);
+        //        //_cache?.Set(CacheKeyADGroups, items);
+        //    }
+        //    else
+        //    {
+        //        items.Add(username, uniqueGroups);
+        //    }
+        //    return uniqueGroups;
+        //    //}
+        //}
 
-        private IEnumerable<string> GetGroupsForUserCore(string username)
-        {
-            using (var ldapConnection = this.GetConnection())
-            {
-                var result = PagingHandler(_searchBase, $"(sAMAccountName={username})", SearchScope.Subtree, new string[] { "cn", "memberOf" });
-                foreach (SearchResultEntry entry in result)
-                {
-                    foreach (var value in HandleEntry(entry))
-                        yield return value;
-                }
-            }
-        }
+        //private IEnumerable<string> GetGroupsForUserCore(string username)
+        //{
+        //    using (var ldapConnection = this.GetConnection())
+        //    {
+        //        var result = PagingHandler(_searchBase, $"(sAMAccountName={username})", SearchScope.Subtree, new string[] { "cn", "memberOf" });
+        //        foreach (SearchResultEntry entry in result)
+        //        {
+        //            foreach (var value in HandleEntry(entry))
+        //                yield return value;
+        //        }
+        //    }
+        //}
 
-        private IEnumerable<string> HandleEntry(SearchResultEntry entry)
-        {
-            var attr = GetStringArrayAttribute(entry.Attributes, "memberOf");
+        //private IEnumerable<string> HandleEntry(SearchResultEntry entry)
+        //{
+        //    var attr = GetStringArrayAttribute(entry.Attributes, "memberOf");
 
-            if (attr == null) yield break;
+        //    if (attr == null) yield break;
 
-            foreach (string value in attr)
-            {
-                string groupName = GetCN(value);
-                yield return groupName;
-            }
-        }
+        //    foreach (string value in attr)
+        //    {
+        //        string groupName = GetCN(value);
+        //        yield return groupName;
+        //    }
+        //}
 
         private string GetCN(string value)
         {
