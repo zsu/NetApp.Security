@@ -1045,9 +1045,13 @@ namespace NetApp.Security
             var changes = new List<DirectoryAttributeModification>();
             foreach (var item in attributes)
             {
+                var current = GetUserAttribute(username, item.Key);
+                if (current==item.Value)
+                    continue;
                 var attribute = new DirectoryAttributeModification();
                 if (string.IsNullOrWhiteSpace(item.Value))
                 {
+                    if(string.IsNullOrWhiteSpace(current)) continue;
                     attribute.Operation = DirectoryAttributeOperation.Delete;
                 }
                 else
