@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Authors>Zhicheng Su</Authors>
-    <Version>5.9</Version>
+    <Version>5.9.1</Version>
     <Description>Ldap library for .Net</Description>
     <Copyright>Zhicheng Su</Copyright>
     <PackageTags>Security, Ldap, Active Directory, .Net</PackageTags>
