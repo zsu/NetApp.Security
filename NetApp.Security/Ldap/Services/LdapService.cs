@@ -1062,7 +1062,7 @@ namespace NetApp.Security
                 attribute.Name = item.Key;
                 changes.Add(attribute);
             }
-
+            if(changes.Count() <= 0) return;
             var request = new ModifyRequest(user.DistinguishedName, changes.ToArray());
             using (var ldapConnection = this.GetConnection())
             {
