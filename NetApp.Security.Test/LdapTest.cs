@@ -115,6 +115,7 @@ namespace NetApp.Security.Test
             _ldapService.SetUserAttributes(_username, oldAttributes);
             Assert.IsTrue(_ldapService.GetUserAttribute(_username, LdapAttributes.Mobile) == null);
             Assert.IsTrue(_ldapService.GetUserAttribute(_username, LdapAttributes.Division) == null);
+            _ldapService.SetUserAttributes(_username, oldAttributes);
         }
         [TestMethod]
         public void DisableAccount()
