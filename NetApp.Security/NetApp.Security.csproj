@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <Description>Ldap library for .Net</Description>
     <Copyright>Zhicheng Su</Copyright>
     <PackageProjectUrl>https://github.com/zsu/NetApp.Security</PackageProjectUrl>
@@ -9,7 +9,7 @@
     <PackageTags>Security, Ldap, Active Directory, .Net</PackageTags>
     <AssemblyVersion></AssemblyVersion>
     <FileVersion></FileVersion>
-    <Version>7.9.1</Version>
+    <Version>8.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NetApp.Common" Version="3.2.0" />
+    <PackageReference Include="NetApp.Common" Version="4.0.0" />
     <PackageReference Include="System.DirectoryServices.Protocols" Version="7.0.0" />
   </ItemGroup>
 
