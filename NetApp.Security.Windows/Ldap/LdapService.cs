@@ -88,7 +88,7 @@ namespace NetApp.Security.Windows
             //    }
             //}
         }
-        protected override ICollection<T> GetChildren<T>(string searchBase, string? groupDistinguishedName = null, bool recursive = true)
+        protected override ICollection<T> GetChildren<T>(string searchBase, string groupDistinguishedName = null, bool recursive = true)
         {
             var entries = new Collection<T>();
 
@@ -118,7 +118,7 @@ namespace NetApp.Security.Windows
             return entries;
         }
 
-        protected override ICollection<ILdapEntry> GetChildren(string searchBase, string? groupDistinguishedName = null,
+        protected override ICollection<ILdapEntry> GetChildren(string searchBase, string groupDistinguishedName = null,
         string objectCategory = "*", string objectClass = "*", bool recursive = true)
         {
             var allChildren = new HashSet<ILdapEntry>();
@@ -142,7 +142,7 @@ namespace NetApp.Security.Windows
             }
             return allChildren;
         }
-        protected override ICollection<T> GetParent<T>(string searchBase, string? distinguishedName = null, bool recursive = true)
+        protected override ICollection<T> GetParent<T>(string searchBase, string distinguishedName = null, bool recursive = true)
         {
             var entries = new Collection<T>();
 
@@ -172,7 +172,7 @@ namespace NetApp.Security.Windows
             return entries;
         }
 
-        protected override ICollection<ILdapEntry> GetParent(string searchBase, string? distinguishedName = null,
+        protected override ICollection<ILdapEntry> GetParent(string searchBase, string distinguishedName = null,
         string objectCategory = "*", string objectClass = "*", bool recursive = true)
         {
             if (!recursive)

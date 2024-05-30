@@ -87,7 +87,9 @@ namespace NetApp.Security
                     }
                 }
             }
-            return groups.DistinctBy(x => x.Name).ToList();
+            //return groups.DistinctBy(x => x.Name).ToList();
+            return groups.GroupBy(x=>x.Name).Select(x => x.First()).ToList();
+
         }
 
         public ICollection<LdapUser> GetAllUsers(string container = null)
@@ -116,7 +118,8 @@ namespace NetApp.Security
                 }
             }
 
-            return users.DistinctBy(x => x.SamAccountName).ToList();
+            //return users.DistinctBy(x => x.SamAccountName).ToList();
+            return users.GroupBy(x => x.SamAccountName).Select(x => x.First()).ToList();
         }
 
         public ICollection<LdapUser> GetUsersByEmailAddress(string emailAddress)
