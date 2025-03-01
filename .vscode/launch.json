@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Launch NetApp.Security.Test",
+        "type": "coreclr",
+        "request": "launch",
+        "preLaunchTask": "build",
+        "program": "${workspaceFolder}/NetApp.Security.Test/bin/Debug/net9.0/NetApp.Security.Test.dll",
+        "args": [],
+        "cwd": "${workspaceFolder}/NetApp.Security.Test",
+        "stopAtEntry": false,
+        "console": "internalConsole"
+      }
+    ]
+  }
+  

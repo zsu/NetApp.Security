@@ -1,0 +1,20 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+	  {
+		"label": "build",
+		"command": "dotnet",
+		"type": "process",
+		"args": [
+		  "build",
+		  "${workspaceFolder}/NetApp.Security.Test/NetApp.Security.Test.csproj"
+		],
+		"problemMatcher": "$msCompile",
+		"group": {
+		  "kind": "build",
+		  "isDefault": true
+		}
+	  }
+	]
+  }
+  
