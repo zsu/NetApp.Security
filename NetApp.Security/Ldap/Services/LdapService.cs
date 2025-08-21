@@ -608,25 +608,51 @@ namespace NetApp.Security
         {
             var entries = new Collection<T>();
 
-            var objectCategory = "*";
-            var objectClass = "*";
-
-            if (typeof(T) == typeof(LdapEntry))
+            if (string.IsNullOrEmpty(distinguishedName))
             {
-                objectClass = "group";
-                objectCategory = "group";
-                entries = this.GetParent(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, distinguishedName, objectCategory, objectClass, recursive)
-                .Cast<T>().ToCollection();
+                return entries;
             }
 
-            if (typeof(T) == typeof(LdapUser))
+            using (var ldapConnection = this.GetConnection())
             {
-                objectCategory = "person";
-                objectClass = "user";
+                // First get the tokenGroups for the specified distinguishedName
+                var tokenGroupsFilter = $"(&(distinguishedName={distinguishedName}))";
+                var tokenGroupsResult = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, 
+                    tokenGroupsFilter, SearchScope.Subtree, new[] { "tokenGroups", "objectClass" });
+                
+                foreach (SearchResultEntry entry in tokenGroupsResult)
+                {
+                    var tokenGroups = entry.Attributes["tokenGroups"];
+                    if (tokenGroups != null)
+                    {
+                        // Build an OR filter for all SIDs
+                        var sidFilters = new List<string>();
+                        foreach (byte[] sidBytes in tokenGroups)
+                        {
+                            var sid = new SecurityIdentifier(sidBytes, 0).ToString();
+                            sidFilters.Add($"(objectSid={sid})");
+                        }
 
-                entries = this.GetParent(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, distinguishedName, objectCategory, objectClass, recursive).Cast<T>()
-                .ToCollection();
+                        if (sidFilters.Count > 0)
+                        {
+                            var filter = $"(&(|(objectClass=group)(objectClass=user))(|{string.Join("", sidFilters)}))";
+                            var result = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, 
+                                filter, SearchScope.Subtree, _attributes);
 
+                            foreach (SearchResultEntry groupEntry in result)
+                            {
+                                if (typeof(T) == typeof(LdapEntry) && groupEntry.Attributes["objectClass"].Contains("group"))
+                                {
+                                    entries.Add((T)(object)this.CreateEntryFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
+                                }
+                                else if (typeof(T) == typeof(LdapUser) && groupEntry.Attributes["objectClass"].Contains("user"))
+                                {
+                                    entries.Add((T)(object)this.CreateUserFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             return entries;
@@ -635,33 +661,62 @@ namespace NetApp.Security
         protected virtual ICollection<ILdapEntry> GetParent(string searchBase, string distinguishedName = null,
         string objectCategory = "*", string objectClass = "*", bool recursive = true)
         {
-            var allChildren = new Collection<ILdapEntry>();
+            if (string.IsNullOrEmpty(distinguishedName))
+            {
+                return new Collection<ILdapEntry>();
+            }
 
-            var filter = string.IsNullOrEmpty(distinguishedName)
-            ? $"(&(objectCategory={objectCategory})(objectClass={objectClass}))"
-            : ($"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={distinguishedName}))");
+            var allEntries = new Collection<ILdapEntry>();
+            
             using (var ldapConnection = this.GetConnection())
             {
-                var result = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, filter, SearchScope.Subtree, _attributes);
-                foreach (SearchResultEntry entry in result)
+                // Get tokenGroups for the specified distinguishedName
+                var tokenGroupsFilter = $"(&(distinguishedName={distinguishedName}))";
+                var tokenGroupsResult = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, 
+                    tokenGroupsFilter, SearchScope.Subtree, new[] { "tokenGroups", "objectClass" });
+
+                foreach (SearchResultEntry entry in tokenGroupsResult)
                 {
-                    if (objectClass == "group")
+                    var tokenGroups = entry.Attributes["tokenGroups"];
+                    if (tokenGroups != null)
                     {
-                        allChildren.Add(this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes));
-                        if (recursive)
+                        // Build an OR filter for all SIDs
+                        var sidFilters = new List<string>();
+                        foreach (byte[] sidBytes in tokenGroups)
                         {
-                            foreach (var child in this.GetParent(searchBase, entry.DistinguishedName, objectCategory, objectClass, recursive))
+                            var sid = new SecurityIdentifier(sidBytes, 0).ToString();
+                            sidFilters.Add($"(objectSid={sid})");
+                        }
+
+                        if (sidFilters.Count > 0)
+                        {
+                            // Add object class filter based on parameters
+                            var classFilter = objectClass == "*" ? "(|(objectClass=group)(objectClass=user))" 
+                                : $"(objectClass={objectClass})";
+                            var categoryFilter = objectCategory == "*" ? "" 
+                                : $"(objectCategory={objectCategory})";
+                            
+                            var filter = $"(&{classFilter}{categoryFilter}(|{string.Join("", sidFilters)}))";
+                            var result = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, 
+                                filter, SearchScope.Subtree, _attributes);
+
+                            foreach (SearchResultEntry groupEntry in result)
                             {
-                                allChildren.Add(child);
+                                if (groupEntry.Attributes["objectClass"].Contains("group"))
+                                {
+                                    allEntries.Add(this.CreateEntryFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
+                                }
+                                else if (groupEntry.Attributes["objectClass"].Contains("user"))
+                                {
+                                    allEntries.Add(this.CreateUserFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
+                                }
                             }
                         }
                     }
-                    if (objectClass == "user")
-                        allChildren.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
                 }
             }
 
-            return allChildren;
+            return allEntries;
         }
         protected LdapUser CreateUserFromAttributes(string distinguishedName, SearchResultAttributeCollection attributes)
         {
