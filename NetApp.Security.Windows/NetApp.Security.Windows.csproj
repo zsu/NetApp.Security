@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <Authors>Zhicheng Su</Authors>
-    <Version>7.3.0</Version>
+    <Version>7.4.0</Version>
     <Description>Ldap library for .Net</Description>
     <Copyright>Zhicheng Su</Copyright>
     <PackageTags>Security, Ldap, Active Directory, .Net</PackageTags>

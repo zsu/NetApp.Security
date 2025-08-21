@@ -642,11 +642,11 @@ namespace NetApp.Security
 
                                 foreach (SearchResultEntry groupEntry in result)
                                 {
-                                    if (typeof(T) == typeof(LdapEntry) && groupEntry.Attributes["objectClass"].Contains("group"))
+                                    if (typeof(T) == typeof(LdapEntry) && ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "group"))
                                     {
                                         entries.Add((T)(object)this.CreateEntryFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
                                     }
-                                    else if (typeof(T) == typeof(LdapUser) && groupEntry.Attributes["objectClass"].Contains("user"))
+                                    else if (typeof(T) == typeof(LdapUser) && ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "user"))
                                     {
                                         entries.Add((T)(object)this.CreateUserFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
                                     }
@@ -685,7 +685,7 @@ namespace NetApp.Security
                         
                         foreach (SearchResultEntry resultEntry in directResult)
                         {
-                            if (typeof(T) == typeof(LdapEntry) && resultEntry.Attributes["objectClass"].Contains("group"))
+                            if (typeof(T) == typeof(LdapEntry) && ContainsValueInAttribute(resultEntry.Attributes["objectClass"], "group"))
                             {
                                 var groupDn = resultEntry.DistinguishedName;
                                 entries.Add((T)(object)this.CreateEntryFromAttributes(groupDn, resultEntry.Attributes));
@@ -697,7 +697,7 @@ namespace NetApp.Security
                                     processedGroups.Add(groupDn);
                                 }
                             }
-                            else if (typeof(T) == typeof(LdapUser) && resultEntry.Attributes["objectClass"].Contains("user"))
+                            else if (typeof(T) == typeof(LdapUser) && ContainsValueInAttribute(resultEntry.Attributes["objectClass"], "user"))
                             {
                                 entries.Add((T)(object)this.CreateUserFromAttributes(resultEntry.DistinguishedName, resultEntry.Attributes));
                             }
@@ -713,7 +713,7 @@ namespace NetApp.Security
                             
                             foreach (SearchResultEntry resultEntry in nestedResult)
                             {
-                                if (typeof(T) == typeof(LdapEntry) && resultEntry.Attributes["objectClass"].Contains("group"))
+                                if (typeof(T) == typeof(LdapEntry) && ContainsValueInAttribute(resultEntry.Attributes["objectClass"], "group"))
                                 {
                                     var groupDn = resultEntry.DistinguishedName;
                                     entries.Add((T)(object)this.CreateEntryFromAttributes(groupDn, resultEntry.Attributes));
@@ -751,11 +751,11 @@ namespace NetApp.Security
                         
                         foreach (SearchResultEntry resultEntry in directResult)
                         {
-                            if (typeof(T) == typeof(LdapEntry) && resultEntry.Attributes["objectClass"].Contains("group"))
+                            if (typeof(T) == typeof(LdapEntry) && ContainsValueInAttribute(resultEntry.Attributes["objectClass"], "group"))
                             {
                                 entries.Add((T)(object)this.CreateEntryFromAttributes(resultEntry.DistinguishedName, resultEntry.Attributes));
                             }
-                            else if (typeof(T) == typeof(LdapUser) && resultEntry.Attributes["objectClass"].Contains("user"))
+                            else if (typeof(T) == typeof(LdapUser) && ContainsValueInAttribute(resultEntry.Attributes["objectClass"], "user"))
                             {
                                 entries.Add((T)(object)this.CreateUserFromAttributes(resultEntry.DistinguishedName, resultEntry.Attributes));
                             }
@@ -813,11 +813,11 @@ namespace NetApp.Security
 
                                 foreach (SearchResultEntry groupEntry in result)
                                 {
-                                    if (groupEntry.Attributes["objectClass"].Contains("group"))
+                                    if (ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "group"))
                                     {
                                         allEntries.Add(this.CreateEntryFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
                                     }
-                                    else if (groupEntry.Attributes["objectClass"].Contains("user"))
+                                    else if (ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "user"))
                                     {
                                         allEntries.Add(this.CreateUserFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
                                     }
@@ -839,7 +839,14 @@ namespace NetApp.Security
                         
                     foreach (SearchResultEntry groupEntry in result)
                     {
-                        allEntries.Add(this.CreateEntryFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
+                        if (ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "group"))
+                        {
+                            allEntries.Add(this.CreateEntryFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
+                        }
+                        else if (ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "user"))
+                        {
+                            allEntries.Add(this.CreateUserFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
+                        }
                     }
                 }
             }
@@ -1194,7 +1201,7 @@ namespace NetApp.Security
             //    if (string.IsNullOrWhiteSpace(distinguishedName))
             //        return null;
             //    groups = new List<string>();
-            //    var getGroupsFilterForDn = recursive ? $"(&(objectCategory=group)(member:1.2.840.113556.1.4.1941:={distinguishedName}))" : $"(&(objectCategory=group)(member={distinguishedName}))";
+            //    var getGroupsFilterForDn = recursive ? $"(&(objectCategory=group)(member:1.2.840.113556.1.4.1941:={distinguishedName}))" : $"&(objectCategory=group)(member={distinguishedName})";
             //    using (DirectorySearcher dirSearch = new DirectorySearcher())
             //    {
             //        dirSearch.Filter = getGroupsFilterForDn;
@@ -1226,7 +1233,6 @@ namespace NetApp.Security
             //var changes = new List<LdapModification>();
             //changes.AddRange(attributes.Where(x => !string.IsNullOrWhiteSpace(x.Value)).Select(x => new DirectoryAttributeModification ( DirectoryAttributeOperation.Replace,  new LdapAttribute(x.Key, x.Value) )).ToList());
             //changes.AddRange(attributes.Where(x => string.IsNullOrWhiteSpace(x.Value)).Select(x => new LdapModification(LdapModification.DELETE, new LdapAttribute(x.Key))).ToList());              
-            //changes.AddRange(attributes.Where(x => string.IsNullOrWhiteSpace(x.Value)).Select(x => new DirectoryAttributeModification(DirectoryAttributeOperation.Replace, new LdapAttribute(x.Key, new string[] { }))).ToList());
             //ldapConnection.Modify(user.DistinguishedName, changes.ToArray());
             var changes = new List<DirectoryAttributeModification>();
             foreach (var item in attributes)
@@ -1392,6 +1398,8 @@ namespace NetApp.Security
             }
             catch (DirectoryOperationException ex)
             {
+                // If we're searching by distinguishedName from the domain root, that's inefficient and often fails
+                // Let's try to detect that case and provide a helpful error
                 if (filter.Contains("distinguishedName=") && 
                     distinguishedName.StartsWith("DC=") && 
                     !distinguishedName.Contains("OU=") && 
@@ -1401,6 +1409,8 @@ namespace NetApp.Security
                         "Searching by distinguishedName from the domain root is inefficient and often fails. " +
                         "Consider using a more specific search base or a different attribute.", ex);
                 }
+                
+                // Otherwise, just rethrow the original exception
                 throw;
             }
     
@@ -1508,7 +1518,6 @@ namespace NetApp.Security
             byte[] bva = null;
             if (attributes[key] != null)
             {
-                // Deep copy so app can't change the value
                 bva = new byte[((byte[])attributes[key][0]).Length];
                 Array.Copy((Array)attributes[key][0], 0, bva, 0, bva.Length);
             }
@@ -1532,6 +1541,48 @@ namespace NetApp.Security
 
             //return sva;
             return (string[])attributes[key].GetValues(typeof(string));
+        }
+        /// <summary>
+        /// Checks if a DirectoryAttribute contains a specific string value
+        /// </summary>
+        /// <param name="attribute">The directory attribute to check</param>
+        /// <param name="value">The string value to look for</param>
+        /// <returns>True if the value is found, false otherwise</returns>
+        private bool ContainsValueInAttribute(DirectoryAttribute attribute, string value)
+        {
+            if (attribute == null || string.IsNullOrEmpty(value))
+            {
+                return false;
+            }
+
+            try
+            {
+                string[] values = attribute.GetValues(typeof(string)) as string[];
+                if (values != null)
+                {
+                    foreach (string val in values)
+                    {
+                        if (string.Equals(val, value, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
+            
+            foreach (object attrValue in attribute)
+            {
+                if (attrValue is string stringValue && 
+                    string.Equals(stringValue, value, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            
+            return false;
         }
     }
 }
