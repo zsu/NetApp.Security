@@ -1392,8 +1392,6 @@ namespace NetApp.Security
             }
             catch (DirectoryOperationException ex)
             {
-                // If we're searching by distinguishedName from the domain root, that's inefficient and often fails
-                // Let's try to detect that case and provide a helpful error
                 if (filter.Contains("distinguishedName=") && 
                     distinguishedName.StartsWith("DC=") && 
                     !distinguishedName.Contains("OU=") && 
@@ -1403,8 +1401,6 @@ namespace NetApp.Security
                         "Searching by distinguishedName from the domain root is inefficient and often fails. " +
                         "Consider using a more specific search base or a different attribute.", ex);
                 }
-                
-                // Otherwise, just rethrow the original exception
                 throw;
             }
     
