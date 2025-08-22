@@ -126,8 +126,6 @@ namespace NetApp.Security.Windows
         string objectCategory = "*", string objectClass = "*", bool recursive = true)
         {
             var allChildren = new HashSet<ILdapEntry>();
-            
-            // If groupDistinguishedName is null or empty, return all entries matching the other filters
             if (string.IsNullOrEmpty(groupDistinguishedName))
             {
                 using (var ldapConnection = this.GetConnection())
@@ -224,9 +222,7 @@ namespace NetApp.Security.Windows
         protected override ICollection<ILdapEntry> GetParent(string searchBase, string distinguishedName = null,
         string objectCategory = "*", string objectClass = "*", bool recursive = true)
         {
-            var allEntries = new Collection<ILdapEntry>();
-            
-            // If distinguishedName is null or empty, return all entries matching the other filters
+            var allEntries = new Collection<ILdapEntry>();         
             if (string.IsNullOrEmpty(distinguishedName))
             {
                 using (var ldapConnection = this.GetConnection())

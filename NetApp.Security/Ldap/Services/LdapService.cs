@@ -617,8 +617,7 @@ namespace NetApp.Security
             {
                 try
                 {
-                    // Use the distinguished name directly as the search base for the tokenGroups search
-                    var tokenGroupsFilter = "(objectClass=*)";
+                     var tokenGroupsFilter = "(objectClass=*)";
                     var tokenGroupsResult = PagingHandler(distinguishedName, tokenGroupsFilter, SearchScope.Base, new[] { "tokenGroups", "objectClass" });
                     
                     foreach (SearchResultEntry entry in tokenGroupsResult)
@@ -626,7 +625,6 @@ namespace NetApp.Security
                         var tokenGroups = entry.Attributes["tokenGroups"];
                         if (tokenGroups != null)
                         {
-                            // Build an OR filter for all SIDs
                             var sidFilters = new List<string>();
                             foreach (byte[] sidBytes in tokenGroups)
                             {
@@ -657,8 +655,7 @@ namespace NetApp.Security
                 }
                 catch (DirectoryOperationException ex)
                 {
-                    // For non-Windows LDAP servers, fall back to recursive manual search
-                    if (recursive)
+                    if (recursive)
                     {
                         string objectCategory = "*";
                         string objectClass = "*";
@@ -674,12 +671,10 @@ namespace NetApp.Security
                             objectClass = "user";
                         }
 
-                        // Start with direct members
                         var directFilter = $"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={distinguishedName}))";
                         var directResult = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, 
                             directFilter, SearchScope.Subtree, _attributes);
                         
-                        // Process direct groups
                         var processedGroups = new HashSet<string>();
                         var groupsToProcess = new Queue<string>();
                         
@@ -689,8 +684,6 @@ namespace NetApp.Security
                             {
                                 var groupDn = resultEntry.DistinguishedName;
                                 entries.Add((T)(object)this.CreateEntryFromAttributes(groupDn, resultEntry.Attributes));
-                                
-                                // Add to queue for processing parent groups
                                 if (!processedGroups.Contains(groupDn))
                                 {
                                     groupsToProcess.Enqueue(groupDn);
@@ -703,7 +696,6 @@ namespace NetApp.Security
                             }
                         }
                         
-                        // Process nested groups recursively
                         while (groupsToProcess.Count > 0)
                         {
                             var currentGroup = groupsToProcess.Dequeue();
@@ -730,7 +722,6 @@ namespace NetApp.Security
                     }
                     else
                     {
-                        // Non-recursive case - just get direct memberships
                         string objectCategory = "*";
                         string objectClass = "*";
 
@@ -781,8 +772,6 @@ namespace NetApp.Security
             {
                 try
                 {
-                    // Use the distinguished name directly as the search base for the tokenGroups search
-                    // This is more efficient than searching from the root
                     var tokenGroupsFilter = "(objectClass=*)";
                     var tokenGroupsResult = PagingHandler(distinguishedName, tokenGroupsFilter, SearchScope.Base, new[] { "tokenGroups", "objectClass" });
 
@@ -791,7 +780,6 @@ namespace NetApp.Security
                         var tokenGroups = entry.Attributes["tokenGroups"];
                         if (tokenGroups != null)
                         {
-                            // Build an OR filter for all SIDs
                             var sidFilters = new List<string>();
                             foreach (byte[] sidBytes in tokenGroups)
                             {
@@ -801,7 +789,6 @@ namespace NetApp.Security
 
                             if (sidFilters.Count > 0)
                             {
-                                // Add object class filter based on parameters
                                 var classFilter = objectClass == "*" ? "(|(objectClass=group)(objectClass=user))" 
                                     : $"(objectClass={objectClass})";
                                 var categoryFilter = objectCategory == "*" ? "" 
@@ -828,8 +815,6 @@ namespace NetApp.Security
                 }
                 catch (DirectoryOperationException ex)
                 {
-                    // Fallback approach if tokenGroups attribute isn't available or the direct search fails
-                    // This can happen in some environments where tokenGroups isn't accessible or LDAP constraints prevent the search
                     var getGroupsFilter = recursive ? 
                         $"(&(objectCategory=group)(member:1.2.840.113556.1.4.1941:={distinguishedName}))" : 
                         $"(&(objectCategory=group)(member={distinguishedName}))";
@@ -1290,7 +1275,6 @@ namespace NetApp.Security
             if (user == null)
                 throw new Exception($"Cannot find user {username}.");
             string pattern = @".+?,OU=(.+?),(?:OU|DC)=.+";
-            // Create a Regex  
             var regex = new Regex(pattern);
             string result = null;
             var match = regex.Match(user.DistinguishedName);
@@ -1398,8 +1382,6 @@ namespace NetApp.Security
             }
             catch (DirectoryOperationException ex)
             {
-                // If we're searching by distinguishedName from the domain root, that's inefficient and often fails
-                // Let's try to detect that case and provide a helpful error
                 if (filter.Contains("distinguishedName=") && 
                     distinguishedName.StartsWith("DC=") && 
                     !distinguishedName.Contains("OU=") && 
@@ -1409,8 +1391,6 @@ namespace NetApp.Security
                         "Searching by distinguishedName from the domain root is inefficient and often fails. " +
                         "Consider using a more specific search base or a different attribute.", ex);
                 }
-                
-                // Otherwise, just rethrow the original exception
                 throw;
             }
     
