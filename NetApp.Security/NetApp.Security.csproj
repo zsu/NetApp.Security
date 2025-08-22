@@ -7,9 +7,9 @@
     <PackageProjectUrl>https://github.com/zsu/NetApp.Security</PackageProjectUrl>
     <RepositoryUrl>https://github.com/zsu/NetApp.Security</RepositoryUrl>
     <PackageTags>Security, Ldap, Active Directory, .Net</PackageTags>
-    <AssemblyVersion>9.4.0</AssemblyVersion>
-    <FileVersion>9.4.0</FileVersion>
-    <Version>9.4.0</Version>
+    <AssemblyVersion>9.5.0</AssemblyVersion>
+    <FileVersion>9.5.0</FileVersion>
+    <Version>9.5.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
