@@ -613,49 +613,55 @@ namespace NetApp.Security
                 return entries;
             }
 
-            using (var ldapConnection = this.GetConnection())
-            {
-                try
-                {
-                     var tokenGroupsFilter = "(objectClass=*)";
-                    var tokenGroupsResult = PagingHandler(distinguishedName, tokenGroupsFilter, SearchScope.Base, new[] { "tokenGroups", "objectClass" });
-                    
-                    foreach (SearchResultEntry entry in tokenGroupsResult)
-                    {
-                        var tokenGroups = entry.Attributes["tokenGroups"];
-                        if (tokenGroups != null)
-                        {
-                            var sidFilters = new List<string>();
-                            foreach (byte[] sidBytes in tokenGroups)
-                            {
-                                var sid = new SecurityIdentifier(sidBytes, 0).ToString();
-                                sidFilters.Add($"(objectSid={sid})");
-                            }
-
-                            if (sidFilters.Count > 0)
-                            {
-                                var filter = $"(&(|(objectClass=group)(objectClass=user))(|{string.Join("", sidFilters)}))";
-                                var result = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, 
-                                    filter, SearchScope.Subtree, _attributes);
-
-                                foreach (SearchResultEntry groupEntry in result)
-                                {
-                                    if (typeof(T) == typeof(LdapEntry) && ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "group"))
-                                    {
-                                        entries.Add((T)(object)this.CreateEntryFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
-                                    }
-                                    else if (typeof(T) == typeof(LdapUser) && ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "user"))
-                                    {
-                                        entries.Add((T)(object)this.CreateUserFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                catch (DirectoryOperationException ex)
-                {
-                    if (recursive)
+			using (var ldapConnection = this.GetConnection())
+			{
+				var searchBaseToUse = string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase;
+				var distributionParentDns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+				try
+				{
+					var tokenGroupsFilter = "(objectClass=*)";
+					var tokenGroupsResult = PagingHandler(distinguishedName, tokenGroupsFilter, SearchScope.Base, new[] { "tokenGroups", "objectClass" });
+					foreach (SearchResultEntry entry in tokenGroupsResult)
+					{
+						var tokenGroups = entry.Attributes["tokenGroups"];
+						if (tokenGroups == null) continue;
+						var sidFilters = new List<string>();
+						foreach (byte[] sidBytes in tokenGroups)
+						{
+							var sid = new SecurityIdentifier(sidBytes, 0).ToString();
+							sidFilters.Add($"(objectSid={sid})");
+						}
+						if (sidFilters.Count > 0)
+						{
+							var filter = $"(&(|(objectClass=group)(objectClass=user))(|{string.Join("", sidFilters)}))";
+							var result = PagingHandler(searchBaseToUse, filter, SearchScope.Subtree, _attributes);
+							foreach (SearchResultEntry groupEntry in result)
+							{
+								if (typeof(T) == typeof(LdapEntry) && ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "group"))
+								{
+									var dn = groupEntry.DistinguishedName;
+									if (!distributionParentDns.Contains(dn))
+									{
+										distributionParentDns.Add(dn);
+										entries.Add((T)(object)this.CreateEntryFromAttributes(dn, groupEntry.Attributes));
+									}
+								}
+								else if (typeof(T) == typeof(LdapUser) && ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "user"))
+								{
+									var dn = groupEntry.DistinguishedName;
+									if (!distributionParentDns.Contains(dn))
+									{
+										distributionParentDns.Add(dn);
+										entries.Add((T)(object)this.CreateUserFromAttributes(dn, groupEntry.Attributes));
+									}
+								}
+							}
+						}
+					}
+				}
+				catch (DirectoryOperationException)
+				{
+                    if (recursive)
                     {
                         string objectCategory = "*";
                         string objectClass = "*";
@@ -752,7 +758,33 @@ namespace NetApp.Security
                             }
                         }
                     }
-                }
+				}
+				finally
+				{
+					var queue = new Queue<string>();
+					var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+					queue.Enqueue(distinguishedName);
+					while (queue.Count > 0)
+					{
+						var current = queue.Dequeue();
+						var directFilter = $"(&(objectClass=group)(member={EscapeLdapValue(current)}))";
+						var directResult = PagingHandler(searchBaseToUse, directFilter, SearchScope.Subtree, _attributes);
+						foreach (SearchResultEntry groupEntry in directResult)
+						{
+							if (!ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "group")) continue;
+							var groupDn = groupEntry.DistinguishedName;
+							if (!distributionParentDns.Contains(groupDn))
+							{
+								distributionParentDns.Add(groupDn);
+								entries.Add((T)(object)this.CreateEntryFromAttributes(groupDn, groupEntry.Attributes));
+							}
+							if (recursive && visited.Add(groupDn))
+							{
+								queue.Enqueue(groupDn);
+							}
+						}
+					}
+				}
             }
 
             return entries;
@@ -768,73 +800,72 @@ namespace NetApp.Security
 
             var allEntries = new Collection<ILdapEntry>();
             
-            using (var ldapConnection = this.GetConnection())
-            {
-                try
-                {
-                    var tokenGroupsFilter = "(objectClass=*)";
-                    var tokenGroupsResult = PagingHandler(distinguishedName, tokenGroupsFilter, SearchScope.Base, new[] { "tokenGroups", "objectClass" });
+			using (var ldapConnection = this.GetConnection())
+			{
+				var searchBaseToUse = string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase;
+				var collectedDns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+				try
+				{
+					var tokenGroupsFilter = "(objectClass=*)";
+					var tokenGroupsResult = PagingHandler(distinguishedName, tokenGroupsFilter, SearchScope.Base, new[] { "tokenGroups", "objectClass" });
+					foreach (SearchResultEntry entry in tokenGroupsResult)
+					{
+						var tokenGroups = entry.Attributes["tokenGroups"];
+						if (tokenGroups == null) continue;
+						var sidFilters = new List<string>();
+						foreach (byte[] sidBytes in tokenGroups)
+						{
+							var sid = new SecurityIdentifier(sidBytes, 0).ToString();
+							sidFilters.Add($"(objectSid={sid})");
+						}
+						if (sidFilters.Count > 0)
+						{
+							var classFilter = objectClass == "*" ? "(|(objectClass=group)(objectClass=user))" : $"(objectClass={objectClass})";
+							var categoryFilter = objectCategory == "*" ? string.Empty : $"(objectCategory={objectCategory})";
+							var filter = $"(&{classFilter}{categoryFilter}(|{string.Join("", sidFilters)}))";
+							var result = PagingHandler(searchBaseToUse, filter, SearchScope.Subtree, _attributes);
+							foreach (SearchResultEntry groupEntry in result)
+							{
+								var dn = groupEntry.DistinguishedName;
+								if (ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "group") && collectedDns.Add(dn))
+								{
+									allEntries.Add(this.CreateEntryFromAttributes(dn, groupEntry.Attributes));
+								}
+								else if (ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "user") && collectedDns.Add(dn))
+								{
+									allEntries.Add(this.CreateUserFromAttributes(dn, groupEntry.Attributes));
+								}
+							}
+						}
+					}
+				}
+				catch (DirectoryOperationException)
+				{
+				}
 
-                    foreach (SearchResultEntry entry in tokenGroupsResult)
-                    {
-                        var tokenGroups = entry.Attributes["tokenGroups"];
-                        if (tokenGroups != null)
-                        {
-                            var sidFilters = new List<string>();
-                            foreach (byte[] sidBytes in tokenGroups)
-                            {
-                                var sid = new SecurityIdentifier(sidBytes, 0).ToString();
-                                sidFilters.Add($"(objectSid={sid})");
-                            }
-
-                            if (sidFilters.Count > 0)
-                            {
-                                var classFilter = objectClass == "*" ? "(|(objectClass=group)(objectClass=user))" 
-                                    : $"(objectClass={objectClass})";
-                                var categoryFilter = objectCategory == "*" ? "" 
-                                    : $"(objectCategory={objectCategory})";
-                                
-                                var filter = $"(&{classFilter}{categoryFilter}(|{string.Join("", sidFilters)}))";
-                                var result = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, 
-                                    filter, SearchScope.Subtree, _attributes);
-
-                                foreach (SearchResultEntry groupEntry in result)
-                                {
-                                    if (ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "group"))
-                                    {
-                                        allEntries.Add(this.CreateEntryFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
-                                    }
-                                    else if (ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "user"))
-                                    {
-                                        allEntries.Add(this.CreateUserFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                catch (DirectoryOperationException ex)
-                {
-                    var getGroupsFilter = recursive ? 
-                        $"(&(objectCategory=group)(member:1.2.840.113556.1.4.1941:={distinguishedName}))" : 
-                        $"(&(objectCategory=group)(member={distinguishedName}))";
-                        
-                    var result = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, 
-                        getGroupsFilter, SearchScope.Subtree, _attributes);
-                        
-                    foreach (SearchResultEntry groupEntry in result)
-                    {
-                        if (ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "group"))
-                        {
-                            allEntries.Add(this.CreateEntryFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
-                        }
-                        else if (ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "user"))
-                        {
-                            allEntries.Add(this.CreateUserFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
-                        }
-                    }
-                }
-            }
+				var queue = new Queue<string>();
+				var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+				queue.Enqueue(distinguishedName);
+				while (queue.Count > 0)
+				{
+					var current = queue.Dequeue();
+					var directFilter = $"(&(objectClass=group)(member={EscapeLdapValue(current)}))"; // standard LDAP (no AD OID)
+					var directResult = PagingHandler(searchBaseToUse, directFilter, SearchScope.Subtree, _attributes);
+					foreach (SearchResultEntry groupEntry in directResult)
+					{
+						if (!ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "group")) continue;
+						var groupDn = groupEntry.DistinguishedName;
+						if (collectedDns.Add(groupDn))
+						{
+							allEntries.Add(this.CreateEntryFromAttributes(groupDn, groupEntry.Attributes));
+						}
+						if (recursive && visited.Add(groupDn))
+						{
+							queue.Enqueue(groupDn);
+						}
+					}
+				}
+			}
 
             return allEntries;
         }
@@ -1007,6 +1038,29 @@ namespace NetApp.Security
 
             return match.Groups[1].Value;
         }
+		/// <summary>
+		/// Escapes special characters per RFC 4515 for inclusion in LDAP search filters.
+		/// </summary>
+		/// <param name="value">Raw value to escape.</param>
+		/// <returns>Escaped value safe for LDAP filter usage.</returns>
+		private string EscapeLdapValue(string value)
+		{
+			if (string.IsNullOrEmpty(value)) return string.Empty;
+			var sb = new StringBuilder(value.Length);
+			foreach (var c in value)
+			{
+				switch (c)
+				{
+					case '*': sb.Append("\\2a"); break;
+					case '(': sb.Append("\\28"); break;
+					case ')': sb.Append("\\29"); break;
+					case '\\': sb.Append("\\5c"); break;
+					case '\0': sb.Append("\\00"); break;
+					default: sb.Append(c); break;
+				}
+			}
+			return sb.ToString();
+		}
         //public bool IsUserInGroup(string distinguishedName, List<string> groups)
         //{
         //    if (string.IsNullOrWhiteSpace(distinguishedName) || groups == null || groups.Count() == 0)

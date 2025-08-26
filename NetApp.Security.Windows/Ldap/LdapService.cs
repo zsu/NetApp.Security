@@ -186,185 +186,75 @@ namespace NetApp.Security.Windows
 
             return allChildren;
         }
-        protected override ICollection<T> GetParent<T>(string searchBase, string distinguishedName = null, bool recursive = true)
-        {
-            var entries = new Collection<T>();
-            string objectCategory;
-            string objectClass;
+		protected override ICollection<T> GetParent<T>(string searchBase, string distinguishedName = null, bool recursive = true)
+		{
+			var results = new Collection<T>();
+			if (string.IsNullOrWhiteSpace(distinguishedName)) return results;
 
-            if (typeof(T) == typeof(LdapEntry))
-            {
-                objectCategory = "group";
-                objectClass = "group";
-            }
-            else if (typeof(T) == typeof(LdapUser))
-            {
-                objectCategory = "person";
-                objectClass = "user";
-            }
-            else
-            {
-                return entries;
-            }
+			string objectCategory;
+			string objectClass;
+			if (typeof(T) == typeof(LdapEntry))
+			{
+				objectCategory = "group";
+				objectClass = "group";
+			}
+			else if (typeof(T) == typeof(LdapUser))
+			{
+				objectCategory = "group";
+				objectClass = "group";
+			}
+			else
+			{
+				return results;
+			}
 
-            var allParents = GetParent(searchBase, distinguishedName, objectCategory, objectClass, recursive);
+			var filter = recursive
+				? $"(&(objectCategory={objectCategory})(objectClass={objectClass})(member:1.2.840.113556.1.4.1941:={distinguishedName}))"
+				: $"(&(objectCategory={objectCategory})(objectClass={objectClass})(member={distinguishedName}))";
 
-            foreach (var parent in allParents)
-            {
-                if (parent is T typedParent)
-                {
-                    entries.Add(typedParent);
-                }
-            }
+			using (var ldapConnection = this.GetConnection())
+			{
+				var searchBaseToUse = string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase;
+				var searchResult = PagingHandler(searchBaseToUse, filter, SearchScope.Subtree, _attributes);
+				foreach (SearchResultEntry entry in searchResult)
+				{
+					if (ContainsValueInAttribute(entry.Attributes["objectClass"], "group"))
+					{
+						if (typeof(T) == typeof(LdapEntry))
+							results.Add((T)(object)this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes));
+						else if (typeof(T) == typeof(LdapUser))
+							results.Add((T)(object)this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
+					}
+				}
+			}
+			return results;
+		}
+		protected override ICollection<ILdapEntry> GetParent(string searchBase, string distinguishedName = null,
+			string objectCategory = "*", string objectClass = "*", bool recursive = true)
+		{
+			var all = new Collection<ILdapEntry>();
+			if (string.IsNullOrWhiteSpace(distinguishedName)) return all;
+			var effectiveObjectClass = objectClass == "*" ? "group" : objectClass;
+			var effectiveObjectCategory = objectCategory == "*" ? "group" : objectCategory;
 
-            return entries;
-        }
-        protected override ICollection<ILdapEntry> GetParent(string searchBase, string distinguishedName = null,
-        string objectCategory = "*", string objectClass = "*", bool recursive = true)
-        {
-            var allEntries = new Collection<ILdapEntry>();         
-            if (string.IsNullOrEmpty(distinguishedName))
-            {
-                using (var ldapConnection = this.GetConnection())
-                {
-                    var classFilter = objectClass == "*" ? "(|(objectClass=group)(objectClass=user))" 
-                          : $"(objectClass={objectClass})";
-                    var categoryFilter = objectCategory == "*" ? "" 
-                          : $"(objectCategory={objectCategory})";
-                    
-                    var filter = $"(&{classFilter}{categoryFilter})";
-                    var result = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, 
-                        filter, SearchScope.Subtree, _attributes);
+			var filter = recursive
+				? $"(&(objectCategory={effectiveObjectCategory})(objectClass={effectiveObjectClass})(member:1.2.840.113556.1.4.1941:={distinguishedName}))"
+				: $"(&(objectCategory={effectiveObjectCategory})(objectClass={effectiveObjectClass})(member={distinguishedName}))";
 
-                    foreach (SearchResultEntry entry in result)
-                    {
-                        if (ContainsValueInAttribute(entry.Attributes["objectClass"], "group"))
-                        {
-                            allEntries.Add(this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes));
-                        }
-                        else if (ContainsValueInAttribute(entry.Attributes["objectClass"], "user"))
-                        {
-                            allEntries.Add(this.CreateUserFromAttributes(entry.DistinguishedName, entry.Attributes));
-                        }
-                    }
-                }
-                return allEntries;
-            }
-            using (var ldapConnection = this.GetConnection())
-            {
-                try
-                {
-                    var tokenGroupsFilter = "(objectClass=*)";
-                    var tokenGroupsResult = PagingHandler(distinguishedName, tokenGroupsFilter, SearchScope.Base, new[] { "tokenGroups", "objectClass" });
-
-                    foreach (SearchResultEntry entry in tokenGroupsResult)
-                    {
-                        var tokenGroups = entry.Attributes["tokenGroups"];
-                        if (tokenGroups != null)
-                        {
-                            var sidFilters = new List<string>();
-                            foreach (byte[] sidBytes in tokenGroups)
-                            {
-                                var sid = new SecurityIdentifier(sidBytes, 0).ToString();
-                                sidFilters.Add($"(objectSid={sid})");
-                            }
-
-                            if (sidFilters.Count > 0)
-                            {
-                                var classFilter = objectClass == "*" ? "(|(objectClass=group)(objectClass=user))" 
-                                    : $"(objectClass={objectClass})";
-                                var categoryFilter = objectCategory == "*" ? "" 
-                                    : $"(objectCategory={objectCategory})";
-                                
-                                var tokenGroupsSearchFilter = $"(&{classFilter}{categoryFilter}(|{string.Join("", sidFilters)}))";
-                                var result = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, 
-                                    tokenGroupsSearchFilter, SearchScope.Subtree, _attributes);
-
-                                foreach (SearchResultEntry groupEntry in result)
-                                {
-                                    if (ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "group"))
-                                    {
-                                        allEntries.Add(this.CreateEntryFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
-                                    }
-                                    else if (ContainsValueInAttribute(groupEntry.Attributes["objectClass"], "user"))
-                                    {
-                                        allEntries.Add(this.CreateUserFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                catch (DirectoryOperationException ex)
-                {
-                    var effectiveObjectClass = objectClass == "*" ? "group" : objectClass;
-                    var effectiveObjectCategory = objectCategory == "*" ? "group" : objectCategory;
-                    
-                    var getGroupsFilter = recursive ? 
-                        $"(&(objectCategory={effectiveObjectCategory})(objectClass={effectiveObjectClass})(member:1.2.840.113556.1.4.1941:={distinguishedName}))" : 
-                        $"(&(objectCategory={effectiveObjectCategory})(objectClass={effectiveObjectClass})(member={distinguishedName}))";
-                    
-                    var result = PagingHandler(string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase, 
-                        getGroupsFilter, SearchScope.Subtree, _attributes);
-                    
-                    foreach (SearchResultEntry groupEntry in result)
-                    {
-                        if (groupEntry.Attributes.Contains("objectClass"))
-                        {
-                            var objectClasses = groupEntry.Attributes["objectClass"];
-                            bool isGroup = false;
-                            bool isUser = false;
-                            
-                            if (effectiveObjectClass == "group")
-                            {
-                                isGroup = ContainsValueInAttribute(objectClasses, "group");
-                                
-                                if (!isGroup)
-                                {
-                                    foreach (string val in objectClasses.GetValues(typeof(string)))
-                                    {
-                                        if (string.Equals(val, "group", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            isGroup = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                                
-                                if (isGroup)
-                                {
-                                    allEntries.Add(this.CreateEntryFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
-                                    continue;
-                                }
-                            }
-                            
-                            if (effectiveObjectClass == "user")
-                            {
-                                isUser = ContainsValueInAttribute(objectClasses, "user");
-                                                                if (!isUser)
-                                {
-                                    foreach (string val in objectClasses.GetValues(typeof(string)))
-                                    {
-                                        if (string.Equals(val, "user", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            isUser = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                                
-                                if (isUser)
-                                {
-                                    allEntries.Add(this.CreateUserFromAttributes(groupEntry.DistinguishedName, groupEntry.Attributes));
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            return allEntries;
-        }
+			using (var ldapConnection = this.GetConnection())
+			{
+				var searchBaseToUse = string.IsNullOrWhiteSpace(searchBase) ? this._searchBase : searchBase;
+				var result = PagingHandler(searchBaseToUse, filter, SearchScope.Subtree, _attributes);
+				foreach (SearchResultEntry entry in result)
+				{
+					if (ContainsValueInAttribute(entry.Attributes["objectClass"], "group"))
+					{
+						all.Add(this.CreateEntryFromAttributes(entry.DistinguishedName, entry.Attributes));
+					}
+				}
+			}
+			return all;
+		}
 
         /// <summary>
         /// Checks if a DirectoryAttribute contains a specific string value
