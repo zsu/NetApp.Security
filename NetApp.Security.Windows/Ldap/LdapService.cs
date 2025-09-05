@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using System.IO;
 using System.DirectoryServices.Protocols;
 using System.ComponentModel;
+using SkiaSharp;
 
 namespace NetApp.Security.Windows
 {
@@ -24,6 +25,7 @@ namespace NetApp.Security.Windows
         { }
         public LdapService(LdapSettings ldapSettings, IEncryptionService encryptionService) : base(ldapSettings, encryptionService)
         { }
+        
         public void UpdatePhoto(string username, Stream stream)
         {
             int size = 96;
@@ -32,17 +34,17 @@ namespace NetApp.Security.Windows
             var user = GetUserByLogonName(username);
             if (user == null)
                 throw new Exception($"User {username} not found.");
+            
+            // Reset stream position to beginning
+            stream.Position = 0;
             byte[] bytes;
             using (var ms = new MemoryStream())
             {
                 stream.CopyTo(ms);
                 bytes = ms.ToArray();
             }
-            //var changes = new LdapModification(LdapModification.Replace, new LdapAttribute("jpegPhoto", bytes));
-            //using (var ldapConnection = this.GetConnection())
-            //{
-            //    ldapConnection.Modify(user.DistinguishedName, changes);
-            //}
+            
+            // Update jpegPhoto attribute
             var attribute = new DirectoryAttributeModification();
             attribute.Operation = DirectoryAttributeOperation.Replace;
             attribute.Name = "jpegPhoto";
@@ -52,42 +54,47 @@ namespace NetApp.Security.Windows
             {
                 var response = ldapConnection.SendRequest(request);
             }
-            System.Drawing.Image img = System.Drawing.Image.FromStream(stream);
 
-            if (img.Size.Width > size || img.Size.Height > size)
+            // Process thumbnail
+            stream.Position = 0;
+            using (var codec = SKCodec.Create(stream))
             {
-                System.Drawing.Image resized = ResizeImage(img, new System.Drawing.Size(size, size));
-                using (var ms = new MemoryStream())
+                if (codec == null)
+                    throw new ArgumentException("Unable to decode image from stream", nameof(stream));
+
+                var info = codec.Info;
+                if (info.Width > size || info.Height > size)
                 {
-                    resized.Save(ms, System.Drawing.Imaging.ImageFormat.Bmp);
-                    bytes = ms.ToArray();
+                    stream.Position = 0;
+                    var resizedBytes = ResizeImageToBytes(stream, info, size);
+                    
+                    // Update thumbnailPhoto attribute
+                    attribute = new DirectoryAttributeModification();
+                    attribute.Operation = DirectoryAttributeOperation.Replace;
+                    attribute.Name = "thumbnailPhoto";
+                    attribute.Add(resizedBytes);
+                    request = new ModifyRequest(user.DistinguishedName, attribute);
+                    using (var ldapConnection = this.GetConnection())
+                    {
+                        var response = ldapConnection.SendRequest(request);
+                    }
+                }
+                else
+                {
+                    // Image is already small enough, use original bytes for thumbnail
+                    attribute = new DirectoryAttributeModification();
+                    attribute.Operation = DirectoryAttributeOperation.Replace;
+                    attribute.Name = "thumbnailPhoto";
+                    attribute.Add(bytes);
+                    request = new ModifyRequest(user.DistinguishedName, attribute);
+                    using (var ldapConnection = this.GetConnection())
+                    {
+                        var response = ldapConnection.SendRequest(request);
+                    }
                 }
             }
-            //changes = new LdapModification(LdapModification.Replace, new LdapAttribute("thumbnailPhoto", bytes));
-            //using (var ldapConnection = this.GetConnection())
-            //{
-            //    ldapConnection.Modify(user.DistinguishedName, changes);
-            //}
-            attribute = new DirectoryAttributeModification();
-            attribute.Operation = DirectoryAttributeOperation.Replace;
-            attribute.Name = "thumbnailPhoto";
-            attribute.Add(bytes);
-            request = new ModifyRequest(user.DistinguishedName, attribute);
-            using (var ldapConnection = this.GetConnection())
-            {
-                var response = ldapConnection.SendRequest(request);
-            }
-            //using (var img = Image.FromStream(stream))
-            //{
-            //    ImageConverter converter = new ImageConverter();
-            //    byte[] bytes = (byte[])converter.ConvertTo(img, typeof(byte[]));
-            //    var changes = new LdapModification(LldapModification.REPLACE, new LdapAttribute("jpegPhoto", SupportClass.ToSByteArray(bytes)));
-            //    using (var ldapConnection = this.GetConnection())
-            //    {
-            //        ldapConnection.Modify(user.DistinguishedName, changes);
-            //    }
-            //}
         }
+
         protected override ICollection<T> GetChildren<T>(string searchBase, string groupDistinguishedName = null, bool recursive = true)
         {
             var entries = new Collection<T>();
@@ -186,6 +193,7 @@ namespace NetApp.Security.Windows
 
             return allChildren;
         }
+
 		protected override ICollection<T> GetParent<T>(string searchBase, string distinguishedName = null, bool recursive = true)
 		{
 			var results = new Collection<T>();
@@ -229,6 +237,7 @@ namespace NetApp.Security.Windows
 			}
 			return results;
 		}
+
 		protected override ICollection<ILdapEntry> GetParent(string searchBase, string distinguishedName = null,
 			string objectCategory = "*", string objectClass = "*", bool recursive = true)
 		{
@@ -299,32 +308,29 @@ namespace NetApp.Security.Windows
             return false;
         }
 
-        private System.Drawing.Image ResizeImage(System.Drawing.Image image, System.Drawing.Size size, bool preserveAspectRatio = true)
+        private byte[] ResizeImageToBytes(Stream imageStream, SKImageInfo originalInfo, int maxSize)
         {
-            int newWidth;
-            int newHeight;
-            if (preserveAspectRatio)
+            var (newWidth, newHeight) = CalculateNewDimensions(originalInfo.Width, originalInfo.Height, maxSize);
+            imageStream.Position = 0;
+            using (var originalBitmap = SKBitmap.Decode(imageStream))
+            using (var resizedBitmap = originalBitmap.Resize(new SKImageInfo(newWidth, newHeight), SKFilterQuality.High))
+            using (var image = SKImage.FromBitmap(resizedBitmap))
+            using (var data = image.Encode(SKEncodedImageFormat.Jpeg, 90))
             {
-                int originalWidth = image.Width;
-                int originalHeight = image.Height;
-                float percentWidth = (float)size.Width / (float)originalWidth;
-                float percentHeight = (float)size.Height / (float)originalHeight;
-                float percent = percentHeight < percentWidth ? percentHeight : percentWidth;
-                newWidth = (int)(originalWidth * percent);
-                newHeight = (int)(originalHeight * percent);
+                return data.ToArray();
             }
-            else
-            {
-                newWidth = size.Width;
-                newHeight = size.Height;
-            }
-            System.Drawing.Image newImage = new System.Drawing.Bitmap(newWidth, newHeight);
-            using (System.Drawing.Graphics graphicsHandle = System.Drawing.Graphics.FromImage(newImage))
-            {
-                graphicsHandle.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                graphicsHandle.DrawImage(image, 0, 0, newWidth, newHeight);
-            }
-            return newImage;
+        }
+
+        private (int width, int height) CalculateNewDimensions(int originalWidth, int originalHeight, int maxSize)
+        {
+            if (originalWidth <= maxSize && originalHeight <= maxSize)
+                return (originalWidth, originalHeight);
+
+            double ratio = Math.Min((double)maxSize / originalWidth, (double)maxSize / originalHeight);
+            int newWidth = (int)(originalWidth * ratio);
+            int newHeight = (int)(originalHeight * ratio);
+            
+            return (newWidth, newHeight);
         }
     }
 }
